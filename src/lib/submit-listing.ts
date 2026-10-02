@@ -188,3 +188,134 @@ function uploadErrorMessage(message: string) {
     return "Upload was blocked. Please log in again and retry.";
   return `Upload failed: ${message}`;
 }
+
+/* ---------- Editing an existing listing ---------- */
+
+type EditMedia = { file: File | null; path?: string };
+
+export type ListingEdit = Omit<ListingDraft, "photos" | "video" | "vetCertificate"> & {
+  photos: Partial<Record<PhotoKey, EditMedia>>;
+  video: (EditMedia & { seconds: number }) | null;
+  vetCertificate: EditMedia | null;
+};
+
+/**
+ * Saves changes to a listing. Only photos/video/certificate the seller replaced
+ * are uploaded; the old files are deleted afterwards. Returns the listing's slug.
+ */
+export async function updateListing(
+  listingId: string,
+  draft: ListingEdit,
+  onProgress: (message: string) => void,
+): Promise<string> {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Your login has expired. Please log in again.");
+
+  const folder = `${userId}/${listingId}`;
+  const stamp = Date.now(); // new file names, so phones don't show old cached photos
+  const uploaded: { bucket: string; path: string }[] = [];
+  const replaced: { bucket: string; path: string }[] = [];
+
+  async function upload(bucket: string, path: string, body: Blob, contentType: string) {
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(path, body, { contentType, cacheControl: "31536000", upsert: false });
+    if (error) throw new Error(uploadErrorMessage(error.message));
+    uploaded.push({ bucket, path });
+    return path;
+  }
+
+  // Current saved file paths, to know what gets replaced
+  const { data: current, error: loadError } = await supabase
+    .from("listings")
+    .select("slug, photo_paths, video_path, vet_certificate_path")
+    .eq("id", listingId)
+    .single();
+  if (loadError || !current) throw new Error("Couldn't find this listing. It may have been deleted.");
+  const oldPhotos = (current.photo_paths ?? {}) as Record<string, string>;
+
+  try {
+    // 1. Photos: upload only the replaced ones
+    const photoPaths: Record<string, string> = { ...oldPhotos };
+    const changed = (Object.entries(draft.photos) as [PhotoKey, EditMedia][]).filter(([, m]) => m.file);
+    for (let i = 0; i < changed.length; i++) {
+      const [key, m] = changed[i];
+      onProgress(`Uploading new photos (${i + 1} of ${changed.length})…`);
+      const small = await shrinkImage(m.file!);
+      const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(m.file!);
+      photoPaths[key] = await upload("listing-media", `${folder}/${key}-${stamp}.${ext}`, small, small.type || m.file!.type);
+      if (oldPhotos[key]) replaced.push({ bucket: "listing-media", path: oldPhotos[key] });
+    }
+
+    // 2. Video
+    let videoPath: string | null = current.video_path;
+    let videoSeconds: number | null | undefined = undefined;
+    if (draft.video?.file) {
+      onProgress("Uploading new video. Keep this page open…");
+      videoPath = await upload(
+        "listing-media",
+        `${folder}/walking-${stamp}.${extensionOf(draft.video.file)}`,
+        draft.video.file,
+        draft.video.file.type,
+      );
+      videoSeconds = draft.video.seconds;
+      if (current.video_path) replaced.push({ bucket: "listing-media", path: current.video_path });
+    }
+
+    // 3. Vet certificate
+    let vetPath: string | null = current.vet_certificate_path;
+    if (draft.vetCertificate?.file) {
+      onProgress("Uploading vet certificate…");
+      vetPath = await upload(
+        "documents",
+        `${folder}/vet-certificate-${stamp}.${extensionOf(draft.vetCertificate.file)}`,
+        draft.vetCertificate.file,
+        draft.vetCertificate.file.type,
+      );
+      if (current.vet_certificate_path) replaced.push({ bucket: "documents", path: current.vet_certificate_path });
+    }
+
+    // 4. Save the changes
+    onProgress("Saving changes…");
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        breed: draft.breed,
+        gender: draft.gender,
+        age_years: draft.ageYears,
+        height_inches: draft.heightInches,
+        colour: draft.colour,
+        markings: draft.markings.trim() || null,
+        vaccinated: draft.vaccinated,
+        vet_certificate_path: vetPath,
+        training_level: draft.trainingLevel,
+        handler_experience: draft.handlerExperience,
+        pregnant: draft.pregnant,
+        price_inr: draft.priceInr,
+        negotiable: draft.negotiable,
+        district: draft.district,
+        town: draft.town.trim(),
+        description: draft.description.trim() || null,
+        photo_paths: photoPaths,
+        video_path: videoPath,
+        ...(videoSeconds !== undefined ? { video_seconds: videoSeconds } : {}),
+      })
+      .eq("id", listingId);
+    if (error) throw new Error(`Couldn't save the changes: ${error.message}`);
+  } catch (err) {
+    for (const f of uploaded) {
+      await supabase.storage.from(f.bucket).remove([f.path]).catch(() => {});
+    }
+    throw err;
+  }
+
+  // 5. Delete the files that were replaced (not needed any more)
+  for (const bucket of ["listing-media", "documents"]) {
+    const paths = replaced.filter((f) => f.bucket === bucket).map((f) => f.path);
+    if (paths.length) await supabase.storage.from(bucket).remove(paths).catch(() => {});
+  }
+
+  return current.slug as string;
+}

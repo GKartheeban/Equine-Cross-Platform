@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/listing-card";
 import { breeds, districts, priceRanges } from "@/lib/sample-data";
-import { getLatestListings } from "@/lib/listings";
+import { getDistrictCounts, getLatestListings } from "@/lib/listings";
 
 // Rebuild this page at most once a minute, so new horses appear quickly
 // while most visitors get an instant, cached page.
@@ -11,7 +11,15 @@ const selectClass =
   "h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default async function HomePage() {
-  const latest = await getLatestListings(6);
+  const [latest, counts] = await Promise.all([getLatestListings(6), getDistrictCounts()]);
+
+  // Top 8 districts: most live horses first, then fill with the big districts
+  const TOP = 8;
+  const withHorses = districts
+    .filter((d) => (counts[d.name] ?? 0) > 0)
+    .sort((a, b) => (counts[b.name] ?? 0) - (counts[a.name] ?? 0));
+  const top = [...withHorses, ...districts.filter((d) => d.popular && !counts[d.name])].slice(0, TOP);
+  const rest = districts.filter((d) => !top.includes(d));
 
   return (
     <div className="mx-auto max-w-6xl px-4">
@@ -84,11 +92,9 @@ export default async function HomePage() {
       <section className="border-t py-8">
         <h2 className="text-lg font-semibold">Browse by district</h2>
         <div className="mt-4 flex flex-wrap gap-2">
-          {districts
-            .filter((d) => d.popular)
-            .map((d) => (
-              <DistrictChip key={d.slug} slug={d.slug} name={d.name} />
-            ))}
+          {top.map((d) => (
+            <DistrictChip key={d.slug} slug={d.slug} name={d.name} count={counts[d.name]} />
+          ))}
         </div>
 
         {/* Native <details>: opens without any JavaScript */}
@@ -98,11 +104,9 @@ export default async function HomePage() {
             <span className="hidden group-open:inline">Show fewer</span>
           </summary>
           <div className="mt-3 flex flex-wrap gap-2">
-            {districts
-              .filter((d) => !d.popular)
-              .map((d) => (
-                <DistrictChip key={d.slug} slug={d.slug} name={d.name} />
-              ))}
+            {rest.map((d) => (
+              <DistrictChip key={d.slug} slug={d.slug} name={d.name} count={counts[d.name]} />
+            ))}
           </div>
         </details>
       </section>
@@ -181,13 +185,18 @@ export default async function HomePage() {
   );
 }
 
-function DistrictChip({ slug, name }: { slug: string; name: string }) {
+function DistrictChip({ slug, name, count }: { slug: string; name: string; count?: number }) {
   return (
     <Link
       href={`/horses-for-sale/${slug}`}
-      className="rounded-full border px-4 py-2 text-sm hover:border-primary hover:text-primary"
+      className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:border-primary hover:text-primary"
     >
       {name}
+      {count ? (
+        <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${count} horses`}>
+          {count}
+        </span>
+      ) : null}
     </Link>
   );
 }

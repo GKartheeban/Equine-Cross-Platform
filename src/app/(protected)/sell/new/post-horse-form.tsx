@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { submitListing } from "@/lib/submit-listing";
+import { submitListing, updateListing } from "@/lib/submit-listing";
 import { canPrepareVideo, prepareVideo, readVideoDuration } from "@/lib/prepare-video";
 import { breeds, districts, formatInr } from "@/lib/sample-data";
 import {
@@ -18,9 +18,11 @@ import {
 
 /* ---------- Form data ---------- */
 
-type Media = { file: File; url: string };
+// A photo/video/certificate: a new file picked on the phone (file), or one already
+// saved for this listing (file = null, path = where it is in storage).
+export type Media = { file: File | null; url: string; path?: string };
 
-type FormData = {
+export type ListingFormData = {
   breed: string;
   gender: string;
   ageYears: string;
@@ -41,7 +43,7 @@ type FormData = {
   description: string;
 };
 
-const empty: FormData = {
+const empty: ListingFormData = {
   breed: "", gender: "", ageYears: "", heightInches: "", colour: "", markings: "",
   photos: {}, video: null,
   vaccinated: "", vetCertificate: null, trainingLevel: "", handlerExperience: "", pregnant: "",
@@ -54,7 +56,7 @@ type Errors = Partial<Record<string, string>>;
 
 /* ---------- Validation for each step ---------- */
 
-function validate(step: number, d: FormData): Errors {
+function validate(step: number, d: ListingFormData): Errors {
   const e: Errors = {};
   if (step === 0) {
     if (!d.breed) e.breed = "Choose the breed.";
@@ -90,11 +92,12 @@ function validate(step: number, d: FormData): Errors {
 
 /* ---------- Main form ---------- */
 
-export function PostHorseForm() {
+/** The 6-step listing form. Pass `edit` to change an existing listing instead of posting a new one. */
+export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: ListingFormData } } = {}) {
   const router = useRouter();
   const [checkingLogin, setCheckingLogin] = useState(true);
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<FormData>(empty);
+  const [data, setData] = useState<ListingFormData>(edit?.initial ?? empty);
   const [errors, setErrors] = useState<Errors>({});
   const [submitState, setSubmitState] = useState<
     | { status: "idle" }
@@ -108,12 +111,12 @@ export function PostHorseForm() {
     createClient()
       .auth.getSession()
       .then(({ data: { session } }) => {
-        if (!session) router.replace("/login?next=/sell/new");
+        if (!session) router.replace(`/login?next=${edit ? `/sell/listings/${edit.listingId}/edit` : "/sell/new"}`);
         else setCheckingLogin(false);
       });
-  }, [router]);
+  }, [router, edit]);
 
-  const set = <K extends keyof FormData>(key: K, value: FormData[K]) => {
+  const set = <K extends keyof ListingFormData>(key: K, value: ListingFormData[K]) => {
     setData((d) => ({ ...d, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
   };
@@ -140,10 +143,40 @@ export function PostHorseForm() {
   }
 
   async function submit() {
-    setSubmitState({ status: "working", message: "Starting upload…" });
+    setSubmitState({ status: "working", message: edit ? "Saving changes…" : "Starting upload…" });
     try {
+      const fields = {
+        breed: data.breed,
+        gender: data.gender,
+        ageYears: Number(data.ageYears),
+        heightInches: Number(data.heightInches),
+        colour: data.colour.trim(),
+        markings: data.markings,
+        vaccinated: data.vaccinated === "yes",
+        trainingLevel: data.trainingLevel,
+        handlerExperience: data.handlerExperience,
+        pregnant: data.gender === "Mare" ? data.pregnant === "yes" : null,
+        priceInr: Number(data.priceInr),
+        negotiable: data.negotiable,
+        district: data.district,
+        town: data.town,
+        description: data.description,
+      };
+      const onProgress = (message: string) => setSubmitState({ status: "working", message });
+
+      if (edit) {
+        const slug = await updateListing(
+          edit.listingId,
+          { ...fields, photos: data.photos, video: data.video, vetCertificate: data.vetCertificate },
+          onProgress,
+        );
+        setSubmitState({ status: "done", slug });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       const photos = Object.fromEntries(
-        Object.entries(data.photos).map(([k, m]) => [k, m!.file]),
+        Object.entries(data.photos).flatMap(([k, m]) => (m?.file ? [[k, m.file]] : [])),
       );
       const slug = await submitListing(
         {
@@ -154,7 +187,7 @@ export function PostHorseForm() {
           colour: data.colour.trim(),
           markings: data.markings,
           photos,
-          video: data.video ? { file: data.video.file, seconds: data.video.seconds } : null,
+          video: data.video?.file ? { file: data.video.file, seconds: data.video.seconds } : null,
           vaccinated: data.vaccinated === "yes",
           vetCertificate: data.vetCertificate?.file ?? null,
           trainingLevel: data.trainingLevel,
@@ -182,10 +215,11 @@ export function PostHorseForm() {
     return (
       <div className="mt-8 rounded-xl border p-6 text-center">
         <p className="text-3xl" aria-hidden>✓</p>
-        <p className="mt-2 text-lg font-semibold">Your horse is now live</p>
+        <p className="mt-2 text-lg font-semibold">{edit ? "Changes saved" : "Your horse is now live"}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Buyers can find it in search right away. You can mark it as sold or
-          remove it any time from Account → My listings.
+          {edit
+            ? "Buyers will see the updated listing within a minute."
+            : "Buyers can find it in search right away. You can mark it as sold or remove it any time from Account → My listings."}
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link href={`/horses/${submitState.slug}`} className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
@@ -251,7 +285,7 @@ export function PostHorseForm() {
               disabled={working}
               className="h-12 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
-              {working ? "Uploading…" : submitState.status === "error" ? "Try again" : "Submit listing"}
+              {working ? (edit ? "Saving…" : "Uploading…") : submitState.status === "error" ? "Try again" : edit ? "Save changes" : "Submit listing"}
             </button>
           )}
         </div>
@@ -280,8 +314,8 @@ function Progress({ step }: { step: number }) {
 
 /* ---------- Shared field pieces ---------- */
 
-type SetFn = <K extends keyof FormData>(key: K, value: FormData[K]) => void;
-type StepProps = { data: FormData; set: SetFn; errors: Errors };
+type SetFn = <K extends keyof ListingFormData>(key: K, value: ListingFormData[K]) => void;
+type StepProps = { data: ListingFormData; set: SetFn; errors: Errors };
 
 const inputClass =
   "h-12 w-full rounded-lg border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive";
@@ -398,8 +432,8 @@ function DetailsStep({ data, set, errors }: StepProps) {
 function PhotosStep({
   data, setData, errors, setErrors,
 }: {
-  data: FormData;
-  setData: React.Dispatch<React.SetStateAction<FormData>>;
+  data: ListingFormData;
+  setData: React.Dispatch<React.SetStateAction<ListingFormData>>;
   errors: Errors;
   setErrors: React.Dispatch<React.SetStateAction<Errors>>;
 }) {
@@ -635,7 +669,7 @@ function VideoStep({
         <div>
           <video src={data.video.url} controls playsInline className="aspect-video w-full rounded-xl bg-black" />
           <p className="mt-2 text-sm text-muted-foreground">
-            {data.video.seconds} seconds · {(data.video.file.size / 1024 / 1024).toFixed(1)} MB
+            {data.video.seconds} seconds · {data.video.file ? `${(data.video.file.size / 1024 / 1024).toFixed(1)} MB` : "Current video"}
           </p>
         </div>
       )}
@@ -680,7 +714,7 @@ function HealthStep({ data, set, errors }: StepProps) {
 
       <Field id="vet" label="Vet certificate (optional)" hint="A photo or PDF of the certificate. Builds buyer trust.">
         <label className="flex h-12 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed px-3 text-sm hover:border-primary">
-          <span className="truncate">{data.vetCertificate ? `✓ ${data.vetCertificate.file.name}` : "+ Upload certificate"}</span>
+          <span className="truncate">{data.vetCertificate ? `✓ ${data.vetCertificate.file?.name ?? "Certificate on file (tap to replace)"}` : "+ Upload certificate"}</span>
           <input
             id="vet" type="file" accept="image/*,application/pdf" className="sr-only"
             onChange={(e) => {
@@ -762,7 +796,7 @@ function PriceStep({ data, set, errors }: StepProps) {
 
 /* ---------- Step 6: preview ---------- */
 
-function PreviewStep({ data, goTo }: { data: FormData; goTo: (step: number) => void }) {
+function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: number) => void }) {
   const rows: [string, string, number][] = [
     ["Breed", data.breed, 0],
     ["Gender", data.gender, 0],

@@ -13,11 +13,16 @@ export function AccountMenu() {
   const router = useRouter();
   const [state, setState] = useState<State>({ status: "loading" });
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    const apply = (phone: string | undefined | null, loggedIn: boolean) =>
+    const apply = (phone: string | undefined | null, loggedIn: boolean) => {
       setState(loggedIn ? { status: "in", phone: formatPhone(phone) } : { status: "out" });
+      // Show the Admin link only to admins (the admin page checks again itself)
+      if (loggedIn) supabase.rpc("is_admin").then(({ data }) => setIsAdmin(data === true));
+      else setIsAdmin(false);
+    };
 
     supabase.auth.getSession().then(({ data }) => {
       apply(data.session?.user.phone, !!data.session);
@@ -79,6 +84,11 @@ export function AccountMenu() {
         <Link href="/saved" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
           Saved horses
         </Link>
+        {isAdmin && (
+          <Link href="/admin" onClick={close} className="block border-t px-4 py-2.5 font-medium hover:bg-muted">
+            Admin
+          </Link>
+        )}
         <button
           type="button"
           onClick={logout}

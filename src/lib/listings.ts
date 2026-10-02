@@ -199,3 +199,15 @@ export async function searchListings(f: SearchFilters, limit = 60): Promise<List
   }
   return (data as unknown as Row[]).map(toListing);
 }
+
+/** Number of live horses in each district (district name -> count). */
+export async function getDistrictCounts(): Promise<Record<string, number>> {
+  const { data, error } = await db().from("live_district_counts").select("district, horses");
+  if (error) {
+    console.error("getDistrictCounts:", error.message);
+    return {};
+  }
+  return Object.fromEntries(
+    ((data as unknown as { district: string; horses: number }[]) ?? []).map((r) => [r.district, r.horses]),
+  );
+}

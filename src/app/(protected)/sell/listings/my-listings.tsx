@@ -169,6 +169,11 @@ export function MyListings() {
                   </div>
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                    {(l.status === "live" || l.status === "sold") && (
+                      <Link href={`/sell/listings/${l.id}/edit`} className="rounded-lg border px-3 py-2 hover:bg-muted">
+                        Edit
+                      </Link>
+                    )}
                     {l.status === "live" && (
                       <>
                         <Link href={`/horses/${l.slug}`} className="rounded-lg border px-3 py-2 hover:bg-muted">
