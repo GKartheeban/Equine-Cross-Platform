@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListingCard } from "@/components/listing-card";
-import {
-  breeds,
-  districts,
-  latestListings,
-  priceRanges,
-  type Listing,
-} from "@/lib/sample-data";
+import { breeds, districts, priceRanges } from "@/lib/sample-data";
+import { genders } from "@/lib/horse-options";
+import { searchListings } from "@/lib/listings";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 type Props = { searchParams: SearchParams };
-
-const genders = ["Mare", "Stallion", "Gelding", "Colt", "Filly"] as const;
 
 const sortOptions = [
   { value: "newest", label: "Newest first" },
@@ -42,26 +36,6 @@ const breedName = (slug: string) => breeds.find((b) => b.slug === slug)?.name;
 const districtName = (slug: string) => districts.find((d) => d.slug === slug)?.name;
 const priceLabel = (v: string) => priceRanges.find((p) => p.value === v)?.label;
 
-function applyFilters(list: Listing[], f: Filters) {
-  let result = list.filter((h) => {
-    if (f.breed && h.breed !== breedName(f.breed)) return false;
-    if (f.district && h.district !== districtName(f.district)) return false;
-    if (f.gender && h.gender !== f.gender) return false;
-    if (f.price) {
-      const [min, max] = f.price.split("-").map((n) => (n ? Number(n) : undefined));
-      if (min !== undefined && h.priceInr < min) return false;
-      if (max !== undefined && h.priceInr > max) return false;
-    }
-    return true;
-  });
-  result = [...result].sort((a, b) => {
-    if (f.sort === "price-asc") return a.priceInr - b.priceInr;
-    if (f.sort === "price-desc") return b.priceInr - a.priceInr;
-    return a.postedDaysAgo - b.postedDaysAgo;
-  });
-  return result;
-}
-
 // Builds a readable heading, e.g. "Marwari horses for sale in Madurai"
 function headingFor(f: Filters) {
   const breed = breedName(f.breed);
@@ -82,7 +56,7 @@ const selectClass =
 
 export default async function SearchPage({ searchParams }: Props) {
   const f = await readFilters(searchParams);
-  const results = applyFilters(latestListings, f);
+  const results = await searchListings(f);
 
   // Chips showing active filters, each with a link that removes it
   const active = (

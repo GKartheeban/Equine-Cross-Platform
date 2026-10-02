@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/listing-card";
-import {
-  breeds,
-  districts,
-  priceRanges,
-  latestListings,
-} from "@/lib/sample-data";
+import { breeds, districts, priceRanges } from "@/lib/sample-data";
+import { getLatestListings } from "@/lib/listings";
+
+// Rebuild this page at most once a minute, so new horses appear quickly
+// while most visitors get an instant, cached page.
+export const revalidate = 60;
 
 const selectClass =
   "h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const latest = await getLatestListings(6);
+
   return (
     <div className="mx-auto max-w-6xl px-4">
       {/* Hero + search */}
@@ -113,13 +115,26 @@ export default function HomePage() {
             View all
           </Link>
         </div>
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {latestListings.map((horse) => (
-            <li key={horse.slug}>
-              <ListingCard horse={horse} />
-            </li>
-          ))}
-        </ul>
+        {latest.length > 0 ? (
+          <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latest.map((horse, i) => (
+              <li key={horse.id}>
+                <ListingCard horse={horse} priority={i < 3} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-4 rounded-xl border px-6 py-10 text-center">
+            <p className="font-medium">No horses listed yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Be the first to post a horse for sale.</p>
+            <Link
+              href="/sell/new"
+              className="mt-4 inline-block rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+            >
+              Post your horse
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Why trust us */}
@@ -133,15 +148,15 @@ export default function HomePage() {
             </dd>
           </div>
           <div>
-            <dt className="font-medium">Chat before you travel</dt>
+            <dt className="font-medium">Talk before you travel</dt>
             <dd className="mt-1 text-sm text-muted-foreground">
-              Ask the seller questions and request more photos first.
+              Call or WhatsApp the seller to ask questions and get more videos first.
             </dd>
           </div>
           <div>
-            <dt className="font-medium">Listings are checked</dt>
+            <dt className="font-medium">Verified sellers</dt>
             <dd className="mt-1 text-sm text-muted-foreground">
-              Every listing is reviewed, and fake ones can be reported.
+              Every seller logs in with an OTP-verified mobile number, and fake listings can be reported.
             </dd>
           </div>
         </dl>

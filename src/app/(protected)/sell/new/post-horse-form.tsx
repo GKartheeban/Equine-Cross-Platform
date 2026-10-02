@@ -182,12 +182,15 @@ export function PostHorseForm() {
     return (
       <div className="mt-8 rounded-xl border p-6 text-center">
         <p className="text-3xl" aria-hidden>✓</p>
-        <p className="mt-2 text-lg font-semibold">Submitted. Waiting for approval</p>
+        <p className="mt-2 text-lg font-semibold">Your horse is now live</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          We check every listing before it goes live, usually within a day.
-          You can see its status under Account → My listings.
+          Buyers can find it in search right away. You can mark it as sold or
+          remove it any time from Account → My listings.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link href={`/horses/${submitState.slug}`} className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
+            View listing
+          </Link>
           <Link href="/sell/listings" className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
             My listings
           </Link>
@@ -832,8 +835,8 @@ function PreviewStep({ data, goTo }: { data: FormData; goTo: (step: number) => v
       </div>
 
       <p className="mt-6 rounded-xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
-        Every listing is checked before it goes live. Listings of sick, injured or underage horses,
-        or with fake details, are removed.
+        Your listing goes live as soon as you submit. Buyers can report listings, and
+        listings of sick, injured or underage horses, or with fake details, are removed.
       </p>
     </div>
   );

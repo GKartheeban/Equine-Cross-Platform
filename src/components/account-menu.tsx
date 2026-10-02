@@ -79,9 +79,6 @@ export function AccountMenu() {
         <Link href="/saved" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
           Saved horses
         </Link>
-        <Link href="/chats" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
-          Chats
-        </Link>
         <button
           type="button"
           onClick={logout}

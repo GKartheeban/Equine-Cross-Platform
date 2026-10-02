@@ -24,7 +24,7 @@ export type ListingDraft = {
 
 /**
  * Uploads the photos, video and vet certificate, then saves the listing
- * as "pending" (waiting for approval). Reports progress in plain words.
+ * as "live" straight away. Reports progress in plain words.
  * Returns the new listing's slug.
  */
 export async function submitListing(
@@ -94,7 +94,7 @@ export async function submitListing(
       id: listingId,
       seller_id: userId,
       slug,
-      status: "pending",
+      status: "live",
       breed: draft.breed,
       gender: draft.gender,
       age_years: draft.ageYears,
@@ -115,7 +115,10 @@ export async function submitListing(
       video_path: videoPath,
       video_seconds: draft.video?.seconds ?? null,
     });
-    if (error) throw new Error(`Couldn't save the listing: ${error.message}`);
+    if (error) {
+      const daily = error.message.match(/DAILY_LIMIT: (.*)/);
+      throw new Error(daily ? daily[1] : `Couldn't save the listing: ${error.message}`);
+    }
 
     return slug;
   } catch (err) {
