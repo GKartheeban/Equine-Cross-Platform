@@ -8,6 +8,7 @@ export const breeds = [
   { slug: "country-horse", name: "Country horse" },
   { slug: "pony", name: "Pony" },
   { slug: "sindhi", name: "Sindhi" },
+  { slug: "cross", name: "Cross" },
 ];
 
 // All 38 districts of Tamil Nadu, alphabetical.
@@ -79,8 +80,8 @@ export type Listing = {
   hasVideo: boolean;
   vaccinated: boolean;
   vetCertificate: boolean;
-  trainingLevel: "Untrained" | "Halter-broken" | "Ridden" | "Show / race trained";
-  temperament: "Calm" | "Spirited" | "Needs experienced rider";
+  trainingLevel: "Untrained" | "Ridden" | "Cart" | "Ridden and cart" | "Race" | "Dance only" | "All";
+  handlerExperience: "Beginner" | "Intermediate" | "Expert";
   description: string;
   views: number;
   seller: { name: string; memberSince: string; listings: number };
@@ -93,7 +94,7 @@ export const latestListings: Listing[] = [
     markings: "White star on forehead, curved ears",
     priceInr: 185000, negotiable: true, district: "Madurai", town: "Melur",
     postedDaysAgo: 1, hasVideo: true, vaccinated: true, vetCertificate: true,
-    trainingLevel: "Ridden", temperament: "Calm",
+    trainingLevel: "Dance only", handlerExperience: "Beginner",
     description:
       "Healthy Marwari mare with classic curved ears. Ridden daily, calm with children, used at local functions. Selling because we are moving.",
     views: 214,
@@ -105,7 +106,7 @@ export const latestListings: Listing[] = [
     markings: "Dappled grey, dark mane",
     priceInr: 240000, negotiable: false, district: "Coimbatore", town: "Pollachi",
     postedDaysAgo: 2, hasVideo: true, vaccinated: true, vetCertificate: false,
-    trainingLevel: "Show / race trained", temperament: "Spirited",
+    trainingLevel: "Race", handlerExperience: "Intermediate",
     description:
       "Strong Kathiawari stallion, shown at two horse fairs. Good bloodline. Serious buyers only.",
     views: 341,
@@ -117,7 +118,7 @@ export const latestListings: Listing[] = [
     markings: "White socks on hind legs",
     priceInr: 45000, negotiable: true, district: "Salem", town: "Attur",
     postedDaysAgo: 3, hasVideo: false, vaccinated: false, vetCertificate: false,
-    trainingLevel: "Ridden", temperament: "Calm",
+    trainingLevel: "Ridden and cart", handlerExperience: "Beginner",
     description: "Hardy country horse, used for cart and riding. Easy keeper.",
     views: 98,
     seller: { name: "Selvam P.", memberSince: "2026", listings: 3 },
@@ -128,7 +129,7 @@ export const latestListings: Listing[] = [
     markings: "Full black, no markings",
     priceInr: 320000, negotiable: true, district: "Tiruchirappalli (Trichy)", town: "Srirangam",
     postedDaysAgo: 4, hasVideo: true, vaccinated: true, vetCertificate: true,
-    trainingLevel: "Ridden", temperament: "Needs experienced rider",
+    trainingLevel: "Ridden", handlerExperience: "Expert",
     description:
       "Tall black Marwari stallion with excellent gait. Needs an experienced handler. Vet certificate available.",
     views: 402,
@@ -140,7 +141,7 @@ export const latestListings: Listing[] = [
     markings: "Light mane and tail",
     priceInr: 38000, negotiable: true, district: "Chennai", town: "Tambaram",
     postedDaysAgo: 5, hasVideo: true, vaccinated: true, vetCertificate: false,
-    trainingLevel: "Halter-broken", temperament: "Calm",
+    trainingLevel: "Untrained", handlerExperience: "Beginner",
     description: "Gentle pony, good for children's riding lessons. Halter trained.",
     views: 156,
     seller: { name: "Priya V.", memberSince: "2026", listings: 1 },
@@ -151,7 +152,7 @@ export const latestListings: Listing[] = [
     markings: "Blaze on face",
     priceInr: 410000, negotiable: false, district: "Erode", town: "Gobichettipalayam",
     postedDaysAgo: 6, hasVideo: false, vaccinated: true, vetCertificate: true,
-    trainingLevel: "Show / race trained", temperament: "Spirited",
+    trainingLevel: "Race", handlerExperience: "Expert",
     description: "Retired racehorse, fit and sound. Suitable for show jumping training.",
     views: 287,
     seller: { name: "Ramesh T.", memberSince: "2026", listings: 2 },

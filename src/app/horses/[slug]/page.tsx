@@ -48,7 +48,7 @@ export default async function HorseDetailPage({ params }: Props) {
     ["Vaccinated", horse.vaccinated ? "Yes" : "No"],
     ["Vet certificate", horse.vetCertificate ? "Available" : "Not provided"],
     ["Training", horse.trainingLevel],
-    ["Temperament", horse.temperament],
+    ["Handler's Experience", horse.handlerExperience],
   ];
 
   // Structured data: lets Google show price and availability in search results

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountMenu } from "@/components/account-menu";
 
 export function SiteHeader() {
   return (
@@ -15,12 +16,7 @@ export function SiteHeader() {
           >
             Browse horses
           </Link>
-          <Link
-            href="/login"
-            className="rounded-md px-3 py-2 text-muted-foreground hover:text-foreground"
-          >
-            Login
-          </Link>
+          <AccountMenu />
           <Link
             href="/sell/new"
             className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground hover:bg-primary/90"
