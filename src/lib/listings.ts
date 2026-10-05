@@ -9,6 +9,7 @@ import { breeds, districts } from "@/lib/sample-data";
 
 export type Listing = {
   id: string;
+  sellerId: string;
   slug: string;
   breed: string;
   gender: string;
@@ -35,8 +36,9 @@ export type Listing = {
   views: number;
 };
 
-type Row = {
+export type Row = {
   id: string;
+  seller_id: string;
   slug: string;
   breed: string;
   gender: string;
@@ -60,8 +62,10 @@ type Row = {
   views: number;
 };
 
-const COLUMNS =
-  "id, slug, breed, gender, age_years, height_inches, colour, markings, price_inr, negotiable, district, town, created_at, photo_paths, video_path, vaccinated, vet_certificate_path, training_level, handler_experience, pregnant, description, views";
+export const LISTING_COLUMNS =
+  // (kept in one place for the server pages and the Saved page)
+  "id, seller_id, slug, breed, gender, age_years, height_inches, colour, markings, price_inr, negotiable, district, town, created_at, photo_paths, video_path, vaccinated, vet_certificate_path, training_level, handler_experience, pregnant, description, views";
+const COLUMNS = LISTING_COLUMNS;
 
 const MEDIA_BUCKET = "listing-media";
 
@@ -78,7 +82,7 @@ function publicUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path}`;
 }
 
-function toListing(r: Row): Listing {
+export function toListing(r: Row): Listing {
   const photoUrls: Partial<Record<PhotoKey, string>> = {};
   for (const slot of photoSlots) {
     const p = r.photo_paths?.[slot.key];
@@ -87,6 +91,7 @@ function toListing(r: Row): Listing {
   const days = Math.max(0, Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86_400_000));
   return {
     id: r.id,
+    sellerId: r.seller_id,
     slug: r.slug,
     breed: r.breed,
     gender: r.gender,
@@ -210,4 +215,52 @@ export async function getDistrictCounts(): Promise<Record<string, number>> {
   return Object.fromEntries(
     ((data as unknown as { district: string; horses: number }[]) ?? []).map((r) => [r.district, r.horses]),
   );
+}
+
+export type SellerProfile = {
+  name: string | null;
+  avatarUrl: string | null;
+  memberSince: string | null; // ISO date the account's profile was created
+  nameChangedAt: string | null; // ISO date of the last name change (null if never changed)
+};
+
+/** The seller's public profile: name, photo, member-since and last name change. */
+export async function getSellerProfile(sellerId: string): Promise<SellerProfile> {
+  const { data } = await db()
+    .from("profiles")
+    .select("full_name, avatar_path, created_at, name_changed_at")
+    .eq("id", sellerId)
+    .maybeSingle();
+  const p = data as {
+    full_name: string | null;
+    avatar_path: string | null;
+    created_at: string;
+    name_changed_at: string | null;
+  } | null;
+  return {
+    name: p?.full_name?.trim() || null,
+    avatarUrl: p?.avatar_path
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${p.avatar_path}`
+      : null,
+    memberSince: p?.created_at ?? null,
+    nameChangedAt: p?.name_changed_at ?? null,
+  };
+}
+
+/** Every live horse's address and last change, for the Google sitemap. */
+export async function getLiveListingSlugs(): Promise<{ slug: string; updatedAt: string }[]> {
+  const { data, error } = await db()
+    .from("listings")
+    .select("slug, updated_at")
+    .eq("status", "live")
+    .order("updated_at", { ascending: false })
+    .limit(5000);
+  if (error) {
+    console.error("getLiveListingSlugs:", error.message);
+    return [];
+  }
+  return ((data as unknown as { slug: string; updated_at: string }[]) ?? []).map((r) => ({
+    slug: r.slug,
+    updatedAt: r.updated_at,
+  }));
 }

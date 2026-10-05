@@ -5,6 +5,8 @@
 // and the browser records that canvas. A 20-second clip comes out around 5–8 MB.
 // It runs in real time, so a 20-second clip takes about 20 seconds to prepare.
 
+import { AppError } from "@/lib/app-error";
+
 const MAX_SIDE = 1280; // 720p-ish
 const BITRATE = 2_500_000; // ~2.5 Mbps
 
@@ -46,7 +48,7 @@ export function readVideoDuration(url: string): Promise<number> {
         resolve(Number.isFinite(v.duration) ? v.duration : 0);
       };
     };
-    v.onerror = () => reject(new Error("This video can't be played. Try another file."));
+    v.onerror = () => reject(new AppError("videoUnplayable"));
     v.src = url;
   });
 }
@@ -62,7 +64,7 @@ export async function prepareVideo(
   onProgress: (fraction: number) => void,
 ): Promise<{ file: File; seconds: number }> {
   const mimeType = pickMimeType();
-  if (!mimeType) throw new Error("This browser can't prepare videos.");
+  if (!mimeType) throw new AppError("videoUnsupported");
 
   const video = document.createElement("video");
   video.muted = true; // silent: avoids sound while preparing and keeps files small
@@ -72,7 +74,7 @@ export async function prepareVideo(
 
   await new Promise<void>((resolve, reject) => {
     video.onloadedmetadata = () => resolve();
-    video.onerror = () => reject(new Error("This video can't be played. Try another file."));
+    video.onerror = () => reject(new AppError("videoUnplayable"));
   });
 
   // Jump to the chosen start point
@@ -86,7 +88,7 @@ export async function prepareVideo(
   canvas.width = Math.round((video.videoWidth * scale) / 2) * 2; // encoders need even sizes
   canvas.height = Math.round((video.videoHeight * scale) / 2) * 2;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("This browser can't prepare videos.");
+  if (!ctx) throw new AppError("videoUnsupported");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const stream = canvas.captureStream(30);
@@ -132,7 +134,7 @@ export async function prepareVideo(
   const type = mimeType.split(";")[0];
   const ext = type === "video/mp4" ? "mp4" : "webm";
   const blob = new Blob(chunks, { type });
-  if (blob.size === 0) throw new Error("Couldn't prepare the video. Please try again.");
+  if (blob.size === 0) throw new AppError("videoPrepareFailed");
 
   return {
     file: new File([blob], `walking.${ext}`, { type }),

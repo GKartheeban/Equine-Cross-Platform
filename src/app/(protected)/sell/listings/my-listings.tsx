@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { formatInr } from "@/lib/sample-data";
+import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
 
 type Status = "pending" | "live" | "sold" | "expired" | "rejected" | "removed";
 
@@ -23,13 +25,14 @@ type MyListing = {
   vet_certificate_path: string | null;
 };
 
-const statusStyle: Record<Status, { label: string; className: string }> = {
-  live: { label: "Live", className: "bg-green-100 text-green-800" },
-  sold: { label: "Sold", className: "bg-muted text-foreground" },
-  pending: { label: "Waiting", className: "bg-amber-100 text-amber-800" },
-  expired: { label: "Expired", className: "bg-muted text-muted-foreground" },
-  rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
-  removed: { label: "Removed", className: "bg-red-100 text-red-800" },
+// Label text lives in messages (myListings.status.*)
+const statusStyle: Record<Status, string> = {
+  live: "bg-green-100 text-green-800",
+  sold: "bg-muted text-foreground",
+  pending: "bg-amber-100 text-amber-800",
+  expired: "bg-muted text-muted-foreground",
+  rejected: "bg-red-100 text-red-800",
+  removed: "bg-red-100 text-red-800",
 };
 
 const mediaUrl = (path: string) =>
@@ -37,6 +40,9 @@ const mediaUrl = (path: string) =>
 
 export function MyListings() {
   const router = useRouter();
+  const t = useTranslations("myListings");
+  const o = useTranslations("options");
+  const locale = useLocale();
   const [listings, setListings] = useState<MyListing[] | null>(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -56,9 +62,9 @@ export function MyListings() {
       .select("id, slug, status, breed, gender, price_inr, district, town, created_at, photo_paths, video_path, vet_certificate_path")
       .eq("seller_id", session.user.id)
       .order("created_at", { ascending: false });
-    if (error) setError("Couldn't load your listings. Please refresh the page.");
+    if (error) setError(t("errLoad"));
     setListings((data as MyListing[] | null) ?? []);
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     load();
@@ -69,7 +75,7 @@ export function MyListings() {
     setError("");
     const { error } = await createClient().from("listings").update({ status }).eq("id", listing.id);
     setBusyId(null);
-    if (error) return setError("Couldn't update the listing. Please try again.");
+    if (error) return setError(t("errUpdate"));
     setListings((all) => all?.map((l) => (l.id === listing.id ? { ...l, status } : l)) ?? null);
   }
 
@@ -80,7 +86,7 @@ export function MyListings() {
     const { error } = await supabase.from("listings").delete().eq("id", listing.id);
     if (error) {
       setBusyId(null);
-      return setError("Couldn't delete the listing. Please try again.");
+      return setError(t("errDelete"));
     }
     // Also delete its photos, video and certificate from storage
     const media = [...Object.values(listing.photo_paths ?? {}), ...(listing.video_path ? [listing.video_path] : [])];
@@ -92,7 +98,7 @@ export function MyListings() {
   }
 
   if (listings === null) {
-    return <p className="mt-8 text-sm text-muted-foreground">Loading your listings…</p>;
+    return <p className="mt-8 text-sm text-muted-foreground">{t("loading")}</p>;
   }
 
   return (
@@ -105,16 +111,18 @@ export function MyListings() {
 
       {listings.length === 0 ? (
         <div className="rounded-xl border px-6 py-12 text-center">
-          <p className="font-medium">You haven&apos;t posted any horses yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">Post your first horse. It takes about 5 minutes.</p>
+          <p className="font-medium">{t("emptyTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("emptyText")}</p>
         </div>
       ) : (
         <ul className="grid gap-3">
           {listings.map((l) => {
             const cover = l.photo_paths?.front ?? Object.values(l.photo_paths ?? {})[0];
-            const status = statusStyle[l.status] ?? statusStyle.pending;
+            const statusKey = statusStyle[l.status] ? l.status : "pending";
+            const breed = breedSlug(l.breed) ? o(`breed.${breedSlug(l.breed)}`) : l.breed;
+            const district = districtSlug(l.district) ? o(`district.${districtSlug(l.district)}`) : l.district;
             const busy = busyId === l.id;
-            const posted = new Date(l.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+            const posted = new Date(l.created_at).toLocaleDateString(dateLocale(locale), { day: "numeric", month: "short", year: "numeric" });
             return (
               <li key={l.id} className="rounded-xl border p-3">
                 <div className="flex gap-3">
@@ -127,36 +135,36 @@ export function MyListings() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <p className="truncate font-medium">
-                        {l.breed} {l.gender.toLowerCase()}
+                        {breed} {o(`gender.${optionKey(l.gender)}`).toLowerCase()}
                       </p>
-                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                        {status.label}
+                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle[statusKey]}`}>
+                        {t(`status.${statusKey}`)}
                       </span>
                     </div>
                     <p className="mt-0.5 font-semibold">{formatInr(l.price_inr)}</p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {l.town}, {l.district} · Posted {posted}
+                      {l.town}, {district} · {t("posted", { date: posted })}
                     </p>
                   </div>
                 </div>
 
                 {l.status === "removed" && (
                   <p className="mt-3 text-xs text-destructive">
-                    This listing was removed by EquineTrade for breaking the listing rules.
+                    {t("removedNote")}
                   </p>
                 )}
 
                 {/* Actions */}
                 {confirmDelete === l.id ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted p-3 text-sm">
-                    <span className="flex-1">Delete this listing and its photos? This can&apos;t be undone.</span>
+                    <span className="flex-1">{t("confirmDelete")}</span>
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(null)}
                       disabled={busy}
                       className="rounded-lg border bg-background px-3 py-2"
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                     <button
                       type="button"
@@ -164,20 +172,20 @@ export function MyListings() {
                       disabled={busy}
                       className="rounded-lg bg-destructive px-3 py-2 font-medium text-white disabled:opacity-60"
                     >
-                      {busy ? "Deleting…" : "Delete"}
+                      {busy ? t("deleting") : t("delete")}
                     </button>
                   </div>
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-2 text-sm">
                     {(l.status === "live" || l.status === "sold") && (
                       <Link href={`/sell/listings/${l.id}/edit`} className="rounded-lg border px-3 py-2 hover:bg-muted">
-                        Edit
+                        {t("edit")}
                       </Link>
                     )}
                     {l.status === "live" && (
                       <>
                         <Link href={`/horses/${l.slug}`} className="rounded-lg border px-3 py-2 hover:bg-muted">
-                          View
+                          {t("view")}
                         </Link>
                         <button
                           type="button"
@@ -185,7 +193,7 @@ export function MyListings() {
                           disabled={busy}
                           className="rounded-lg border px-3 py-2 hover:bg-muted disabled:opacity-60"
                         >
-                          {busy ? "Saving…" : "Mark as sold"}
+                          {busy ? t("saving") : t("markSold")}
                         </button>
                       </>
                     )}
@@ -196,7 +204,7 @@ export function MyListings() {
                         disabled={busy}
                         className="rounded-lg border px-3 py-2 hover:bg-muted disabled:opacity-60"
                       >
-                        {busy ? "Saving…" : "Not sold? Show again"}
+                        {busy ? t("saving") : t("showAgain")}
                       </button>
                     )}
                     <button
@@ -204,7 +212,7 @@ export function MyListings() {
                       onClick={() => setConfirmDelete(l.id)}
                       className="rounded-lg border px-3 py-2 text-destructive hover:bg-muted"
                     >
-                      Delete
+                      {t("delete")}
                     </button>
                   </div>
                 )}

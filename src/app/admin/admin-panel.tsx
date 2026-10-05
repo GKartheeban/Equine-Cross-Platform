@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatInr } from "@/lib/sample-data";
+import { Dashboard } from "./dashboard";
+import { SellerBox, type SellerInfo } from "./seller-box";
+import { Team } from "./team";
+import { ActivityLog } from "./activity-log";
 
 type ListingInfo = {
   id: string;
@@ -16,6 +20,7 @@ type ListingInfo = {
   status: string;
   created_at: string;
   photo_paths: Record<string, string> | null;
+  seller_id: string;
 };
 
 type Report = {
@@ -29,7 +34,7 @@ type Report = {
 
 type ReportGroup = { listing: ListingInfo; reports: Report[] };
 
-const LISTING_COLUMNS = "id, slug, breed, gender, district, town, price_inr, status, created_at, photo_paths";
+const LISTING_COLUMNS = "id, slug, breed, gender, district, town, price_inr, status, created_at, photo_paths, seller_id";
 
 const thumbUrl = (l: ListingInfo) => {
   const p = l.photo_paths?.front ?? Object.values(l.photo_paths ?? {})[0];
@@ -39,9 +44,15 @@ const thumbUrl = (l: ListingInfo) => {
 const dateText = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
+type Tab = "dashboard" | "reports" | "recent" | "team" | "log";
+
 export function AdminPanel() {
   const [access, setAccess] = useState<"checking" | "denied" | "ok">("checking");
-  const [tab, setTab] = useState<"reports" | "recent">("reports");
+  // 1 = L1 (owner), 2 = L2 (moderator)
+  const [level, setLevel] = useState<1 | 2>(2);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [sellers, setSellers] = useState<Record<string, SellerInfo>>({});
   const [groups, setGroups] = useState<ReportGroup[]>([]);
   const [recent, setRecent] = useState<ListingInfo[]>([]);
   const [liveCount, setLiveCount] = useState(0);
@@ -69,7 +80,29 @@ export function AdminPanel() {
       g.reports.push(r);
       byListing.set(r.listing_id, g);
     }
-    setGroups([...byListing.values()].sort((a, b) => b.reports.length - a.reports.length));
+    const sorted = [...byListing.values()].sort((a, b) => b.reports.length - a.reports.length);
+    setGroups(sorted);
+
+    // Seller profiles of reported horses (name, photo, name changes)
+    const sellerIds = [...new Set(sorted.map((g) => g.listing.seller_id))];
+    if (sellerIds.length) {
+      const [profilesRes, historyRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, avatar_path, created_at").in("id", sellerIds),
+        supabase
+          .from("profile_name_history")
+          .select("user_id, old_name, new_name, changed_at")
+          .in("user_id", sellerIds)
+          .order("changed_at", { ascending: false }),
+      ]);
+      const map: Record<string, SellerInfo> = {};
+      for (const p of profilesRes.data ?? []) {
+        map[p.id] = { id: p.id, name: p.full_name, avatarPath: p.avatar_path, memberSince: p.created_at, history: [] };
+      }
+      for (const h of historyRes.data ?? []) {
+        map[h.user_id]?.history.push({ oldName: h.old_name, newName: h.new_name, changedAt: h.changed_at });
+      }
+      setSellers(map);
+    }
     setRecent((recentRes.data as unknown as ListingInfo[] | null) ?? []);
     setLiveCount(liveRes.count ?? 0);
   }, []);
@@ -79,8 +112,18 @@ export function AdminPanel() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return setAccess("denied");
-      const { data: isAdmin } = await supabase.rpc("is_admin");
-      if (!isAdmin) return setAccess("denied");
+      const { data: lvl, error } = await supabase.rpc("admin_level");
+      if (error) {
+        // 015 not run yet: fall back to the old single-admin check
+        const { data: isAdmin } = await supabase.rpc("is_admin");
+        if (!isAdmin) return setAccess("denied");
+        setNeedsSetup(true);
+        setLevel(1);
+      } else if (lvl === 1 || lvl === 2) {
+        setLevel(lvl);
+      } else {
+        return setAccess("denied");
+      }
       setAccess("ok");
       load();
     })();
@@ -89,11 +132,8 @@ export function AdminPanel() {
   async function setListingStatus(listing: ListingInfo, status: "removed" | "live") {
     setBusy(listing.id);
     setMessage("");
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ status }).eq("id", listing.id);
-    if (!error && status === "removed") {
-      await supabase.from("reports").update({ status: "resolved" }).eq("listing_id", listing.id).eq("status", "open");
-    }
+    // Done in the database, which also records who did it
+    const { error } = await createClient().rpc("mod_set_listing_status", { p_listing_id: listing.id, p_status: status });
     setBusy(null);
     setMessage(error ? "Couldn't update the listing." : status === "removed" ? "Listing removed." : "Listing restored.");
     load();
@@ -102,11 +142,7 @@ export function AdminPanel() {
   async function dismissReports(listingId: string) {
     setBusy(listingId);
     setMessage("");
-    const { error } = await createClient()
-      .from("reports")
-      .update({ status: "resolved" })
-      .eq("listing_id", listingId)
-      .eq("status", "open");
+    const { error } = await createClient().rpc("mod_dismiss_reports", { p_listing_id: listingId });
     setBusy(null);
     setMessage(error ? "Couldn't dismiss the reports." : "Reports dismissed. The listing stays live.");
     load();
@@ -127,8 +163,17 @@ export function AdminPanel() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">{level === 1 ? "L1 · Owner" : "L2 · Moderator"}</span>
+      </div>
+      {needsSetup && (
+        <p className="mt-3 rounded-lg border border-destructive p-3 text-sm text-destructive">
+          Run supabase/015_admin_levels.sql in Supabase to turn on admin levels and the action log.
+        </p>
+      )}
 
+      {tab !== "dashboard" && (
       <dl className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl border p-4">
           <dt className="text-sm text-muted-foreground">Live horses</dt>
@@ -139,13 +184,21 @@ export function AdminPanel() {
           <dd className={`mt-1 text-2xl font-semibold tabular-nums ${openReports ? "text-destructive" : ""}`}>{openReports}</dd>
         </div>
       </dl>
+      )}
 
-      <div className="mt-6 flex gap-2 border-b text-sm" role="tablist">
+      <div className="mt-6 flex gap-1 overflow-x-auto border-b text-sm" role="tablist">
         {(
           [
+            ["dashboard", "Dashboard"],
             ["reports", `Reported (${groups.length})`],
             ["recent", "Newest listings"],
-          ] as const
+            ...(level === 1 && !needsSetup
+              ? ([
+                  ["team", "Team"],
+                  ["log", "Action log"],
+                ] as const)
+              : []),
+          ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
             key={key}
@@ -153,7 +206,7 @@ export function AdminPanel() {
             role="tab"
             aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`-mb-px border-b-2 px-3 py-2 ${tab === key ? "border-primary font-medium" : "border-transparent text-muted-foreground"}`}
+            className={`-mb-px shrink-0 border-b-2 px-3 py-2 ${tab === key ? "border-primary font-medium" : "border-transparent text-muted-foreground"}`}
           >
             {label}
           </button>
@@ -161,6 +214,10 @@ export function AdminPanel() {
       </div>
 
       {message && <p role="status" className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm">{message}</p>}
+
+      {tab === "dashboard" && <Dashboard />}
+      {tab === "team" && level === 1 && <Team />}
+      {tab === "log" && level === 1 && <ActivityLog />}
 
       {tab === "reports" && (
         <ul className="mt-4 grid gap-3">
@@ -172,6 +229,15 @@ export function AdminPanel() {
           {groups.map(({ listing, reports }) => (
             <li key={listing.id} className="rounded-xl border p-3">
               <ListingRow listing={listing} />
+              {sellers[listing.seller_id] && (
+                <SellerBox
+                  seller={sellers[listing.seller_id]}
+                  onChanged={(text) => {
+                    setMessage(text);
+                    load();
+                  }}
+                />
+              )}
               <ul className="mt-3 grid gap-1.5 text-sm">
                 {reports.map((r) => (
                   <li key={r.id} className="rounded-lg bg-muted px-3 py-2">

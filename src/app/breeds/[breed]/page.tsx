@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { BrowseListings } from "@/components/browse-listings";
 import { searchListings } from "@/lib/listings";
 import { breeds } from "@/lib/sample-data";
 
-// Refresh at most once a minute; all breed pages are built ahead of time
+// Database results are reused for up to a minute; only our 7 breeds have pages
 export const revalidate = 60;
 export const dynamicParams = false;
 
@@ -12,45 +13,48 @@ export function generateStaticParams() {
   return breeds.map((b) => ({ breed: b.slug }));
 }
 
-// One short, plain line about each breed
-const breedIntro: Record<string, string> = {
-  marwari: "Marwari horses come from Rajasthan and are known for their inward-curving ears, hardiness and graceful gait.",
-  kathiawari: "Kathiawari horses come from the Kathiawar region of Gujarat, with curved ears, a strong build and great stamina.",
-  thoroughbred: "Thoroughbreds are tall, fast horses bred for racing, also used for show jumping and riding.",
-  "country-horse": "Country horses are hardy local horses, used for riding, carts and weddings across Tamil Nadu.",
-  pony: "Ponies are small horses, usually under 58 inches. Gentle ponies are popular for children and riding lessons.",
-  sindhi: "Sindhi horses come from the Sindh region and are known for their endurance and curved ears.",
-  cross: "Cross-bred horses combine two breeds, often mixing the build of one with the temperament of another.",
-};
-
 type Props = { params: Promise<{ breed: string }> };
+
+async function texts(slug: string) {
+  const [t, o, intro] = await Promise.all([
+    getTranslations("browse"),
+    getTranslations("options"),
+    getTranslations("breedIntro"),
+  ]);
+  const name = o(`breed.${slug}`);
+  const heading = t("breedHeading", { breed: name });
+  return { t, o, name, heading, intro: intro(slug) };
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { breed: slug } = await params;
-  const breed = breeds.find((b) => b.slug === slug);
-  if (!breed) return {};
-  const title = `${breed.name} horses for sale in Tamil Nadu`;
+  if (!breeds.some((b) => b.slug === slug)) return {};
+  const { t, heading, intro } = await texts(slug);
   return {
-    title: `${title} | EquineTrade`,
-    description: `${title}. Photos, walking videos, prices and direct contact with sellers. ${breedIntro[slug] ?? ""}`,
+    title: `${heading} | EquineTrade`,
+    description: `${t("breedMeta", { heading })} ${intro}`,
+    alternates: { canonical: `/breeds/${slug}` },
+    openGraph: { title: heading, description: intro, images: ["/og"] },
   };
 }
 
 export default async function BreedPage({ params }: Props) {
   const { breed: slug } = await params;
-  const breed = breeds.find((b) => b.slug === slug);
-  if (!breed) notFound();
+  if (!breeds.some((b) => b.slug === slug)) notFound();
 
-  const listings = await searchListings({ breed: slug, district: "", price: "", gender: "", sort: "newest" });
+  const [listings, { t, o, heading, intro }] = await Promise.all([
+    searchListings({ breed: slug, district: "", price: "", gender: "", sort: "newest" }),
+    texts(slug),
+  ]);
 
   return (
     <BrowseListings
-      heading={`${breed.name} horses for sale in Tamil Nadu`}
-      intro={breedIntro[slug] ?? `Browse ${breed.name} horses for sale across Tamil Nadu.`}
+      heading={heading}
+      intro={intro}
       listings={listings}
       searchHref={`/horses?breed=${slug}`}
-      chipsHeading="Other breeds"
-      chips={breeds.map((b) => ({ href: `/breeds/${b.slug}`, label: b.name, active: b.slug === slug }))}
+      chipsHeading={t("otherBreeds")}
+      chips={breeds.map((b) => ({ href: `/breeds/${b.slug}`, label: o(`breed.${b.slug}`), active: b.slug === slug }))}
     />
   );
 }

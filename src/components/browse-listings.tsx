@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ListingCard } from "@/components/listing-card";
 import type { Listing } from "@/lib/listings";
 
@@ -20,12 +21,14 @@ export function BrowseListings({
   chipsHeading: string;
   chips: Chip[];
 }) {
+  const t = useTranslations("browse");
+  const c = useTranslations("common");
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
-        <Link href="/" className="hover:text-foreground">Home</Link>
+        <Link href="/" className="hover:text-foreground">{c("home")}</Link>
         {" / "}
-        <Link href="/horses" className="hover:text-foreground">Horses</Link>
+        <Link href="/horses" className="hover:text-foreground">{c("horses")}</Link>
         {" / "}
         <span className="text-foreground">{heading}</span>
       </nav>
@@ -34,11 +37,9 @@ export function BrowseListings({
       <p className="mt-2 max-w-2xl text-muted-foreground">{intro}</p>
 
       <div className="mt-6 flex items-baseline justify-between gap-4">
-        <p className="text-sm text-muted-foreground">
-          {listings.length} {listings.length === 1 ? "horse" : "horses"} for sale
-        </p>
+        <p className="text-sm text-muted-foreground">{t("forSale", { count: listings.length })}</p>
         <Link href={searchHref} className="text-sm text-primary hover:underline">
-          Filter by price, gender…
+          {t("filterMore")}
         </Link>
       </div>
 
@@ -52,16 +53,14 @@ export function BrowseListings({
         </ul>
       ) : (
         <div className="mt-4 rounded-xl border px-6 py-12 text-center">
-          <p className="font-medium">No horses here yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            New horses are added every day. Browse all horses, or post yours to be the first.
-          </p>
+          <p className="font-medium">{t("emptyTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("emptyText")}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             <Link href="/horses" className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
-              Browse all horses
+              {c("browseHorses")}
             </Link>
             <Link href="/sell/new" className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
-              Post your horse
+              {c("postYourHorse")}
             </Link>
           </div>
         </div>
@@ -70,16 +69,16 @@ export function BrowseListings({
       <section className="mt-10 border-t pt-8">
         <h2 className="text-lg font-semibold">{chipsHeading}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
-          {chips.map((c) => (
+          {chips.map((chip) => (
             <Link
-              key={c.href}
-              href={c.href}
-              aria-current={c.active ? "page" : undefined}
+              key={chip.href}
+              href={chip.href}
+              aria-current={chip.active ? "page" : undefined}
               className={`rounded-full border px-4 py-2 text-sm hover:border-primary hover:text-primary ${
-                c.active ? "border-primary text-primary" : ""
+                chip.active ? "border-primary text-primary" : ""
               }`}
             >
-              {c.label}
+              {chip.label}
             </Link>
           ))}
         </div>

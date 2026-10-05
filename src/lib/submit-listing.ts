@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { PhotoKey } from "@/lib/horse-options";
+import { AppError, type ProgressFn } from "@/lib/app-error";
 
 export type ListingDraft = {
   breed: string;
@@ -29,13 +30,13 @@ export type ListingDraft = {
  */
 export async function submitListing(
   draft: ListingDraft,
-  onProgress: (message: string) => void,
+  onProgress: ProgressFn,
 ): Promise<string> {
   const supabase = createClient();
 
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
-  if (!userId) throw new Error("Your login has expired. Please log in again.");
+  if (!userId) throw new AppError("loginExpired");
 
   const listingId = newId();
   const folder = `${userId}/${listingId}`;
@@ -45,7 +46,7 @@ export async function submitListing(
     const { error } = await supabase.storage
       .from(bucket)
       .upload(path, body, { contentType, cacheControl: "31536000", upsert: false });
-    if (error) throw new Error(uploadErrorMessage(error.message));
+    if (error) throw uploadError(error.message);
     uploaded.push({ bucket, path });
     return path;
   }
@@ -56,7 +57,7 @@ export async function submitListing(
     const entries = Object.entries(draft.photos) as [PhotoKey, File][];
     for (let i = 0; i < entries.length; i++) {
       const [key, file] = entries[i];
-      onProgress(`Uploading photos (${i + 1} of ${entries.length})…`);
+      onProgress("photos", { n: i + 1, total: entries.length });
       const small = await shrinkImage(file);
       const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(file);
       photoPaths[key] = await upload("listing-media", `${folder}/${key}.${ext}`, small, small.type || file.type);
@@ -66,7 +67,7 @@ export async function submitListing(
     let videoPath: string | null = null;
     if (draft.video) {
       const mb = (draft.video.file.size / 1024 / 1024).toFixed(0);
-      onProgress(`Uploading video (${mb} MB). Keep this page open…`);
+      onProgress("video", { mb });
       videoPath = await upload(
         "listing-media",
         `${folder}/walking.${extensionOf(draft.video.file)}`,
@@ -78,7 +79,7 @@ export async function submitListing(
     // 3. Vet certificate (private bucket)
     let vetPath: string | null = null;
     if (draft.vetCertificate) {
-      onProgress("Uploading vet certificate…");
+      onProgress("certificate");
       vetPath = await upload(
         "documents",
         `${folder}/vet-certificate.${extensionOf(draft.vetCertificate)}`,
@@ -88,7 +89,7 @@ export async function submitListing(
     }
 
     // 4. Save the listing
-    onProgress("Saving your listing…");
+    onProgress("saving");
     const slug = makeSlug(draft, listingId);
     const { error } = await supabase.from("listings").insert({
       id: listingId,
@@ -117,7 +118,7 @@ export async function submitListing(
     });
     if (error) {
       const daily = error.message.match(/DAILY_LIMIT: (.*)/);
-      throw new Error(daily ? daily[1] : `Couldn't save the listing: ${error.message}`);
+      throw daily ? new AppError("dailyLimit") : new AppError("saveFailed", { detail: error.message });
     }
 
     return slug;
@@ -179,14 +180,13 @@ function makeSlug(d: ListingDraft, id: string) {
   return `${words}-${id.slice(0, 6)}`;
 }
 
-function uploadErrorMessage(message: string) {
+function uploadError(message: string) {
   const m = message.toLowerCase();
-  if (m.includes("size") || m.includes("too large")) return "A file is too large to upload. Choose the video again so it can be shrunk.";
-  if (m.includes("mime") || m.includes("type")) return "One of the files is in a format we can't accept.";
-  if (m.includes("bucket")) return "Storage isn't set up yet. Run the database setup script in Supabase.";
-  if (m.includes("row-level") || m.includes("policy") || m.includes("unauthorized"))
-    return "Upload was blocked. Please log in again and retry.";
-  return `Upload failed: ${message}`;
+  if (m.includes("size") || m.includes("too large")) return new AppError("fileTooLarge");
+  if (m.includes("mime") || m.includes("type")) return new AppError("badFormat");
+  if (m.includes("bucket")) return new AppError("storageNotSetUp");
+  if (m.includes("row-level") || m.includes("policy") || m.includes("unauthorized")) return new AppError("uploadBlocked");
+  return new AppError("uploadFailed", { detail: message });
 }
 
 /* ---------- Editing an existing listing ---------- */
@@ -206,12 +206,12 @@ export type ListingEdit = Omit<ListingDraft, "photos" | "video" | "vetCertificat
 export async function updateListing(
   listingId: string,
   draft: ListingEdit,
-  onProgress: (message: string) => void,
+  onProgress: ProgressFn,
 ): Promise<string> {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
-  if (!userId) throw new Error("Your login has expired. Please log in again.");
+  if (!userId) throw new AppError("loginExpired");
 
   const folder = `${userId}/${listingId}`;
   const stamp = Date.now(); // new file names, so phones don't show old cached photos
@@ -222,7 +222,7 @@ export async function updateListing(
     const { error } = await supabase.storage
       .from(bucket)
       .upload(path, body, { contentType, cacheControl: "31536000", upsert: false });
-    if (error) throw new Error(uploadErrorMessage(error.message));
+    if (error) throw uploadError(error.message);
     uploaded.push({ bucket, path });
     return path;
   }
@@ -233,7 +233,7 @@ export async function updateListing(
     .select("slug, photo_paths, video_path, vet_certificate_path")
     .eq("id", listingId)
     .single();
-  if (loadError || !current) throw new Error("Couldn't find this listing. It may have been deleted.");
+  if (loadError || !current) throw new AppError("listingMissing");
   const oldPhotos = (current.photo_paths ?? {}) as Record<string, string>;
 
   try {
@@ -242,7 +242,7 @@ export async function updateListing(
     const changed = (Object.entries(draft.photos) as [PhotoKey, EditMedia][]).filter(([, m]) => m.file);
     for (let i = 0; i < changed.length; i++) {
       const [key, m] = changed[i];
-      onProgress(`Uploading new photos (${i + 1} of ${changed.length})…`);
+      onProgress("newPhotos", { n: i + 1, total: changed.length });
       const small = await shrinkImage(m.file!);
       const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(m.file!);
       photoPaths[key] = await upload("listing-media", `${folder}/${key}-${stamp}.${ext}`, small, small.type || m.file!.type);
@@ -253,7 +253,7 @@ export async function updateListing(
     let videoPath: string | null = current.video_path;
     let videoSeconds: number | null | undefined = undefined;
     if (draft.video?.file) {
-      onProgress("Uploading new video. Keep this page open…");
+      onProgress("newVideo");
       videoPath = await upload(
         "listing-media",
         `${folder}/walking-${stamp}.${extensionOf(draft.video.file)}`,
@@ -267,7 +267,7 @@ export async function updateListing(
     // 3. Vet certificate
     let vetPath: string | null = current.vet_certificate_path;
     if (draft.vetCertificate?.file) {
-      onProgress("Uploading vet certificate…");
+      onProgress("certificate");
       vetPath = await upload(
         "documents",
         `${folder}/vet-certificate-${stamp}.${extensionOf(draft.vetCertificate.file)}`,
@@ -278,7 +278,7 @@ export async function updateListing(
     }
 
     // 4. Save the changes
-    onProgress("Saving changes…");
+    onProgress("savingChanges");
     const { error } = await supabase
       .from("listings")
       .update({
@@ -303,7 +303,7 @@ export async function updateListing(
         ...(videoSeconds !== undefined ? { video_seconds: videoSeconds } : {}),
       })
       .eq("id", listingId);
-    if (error) throw new Error(`Couldn't save the changes: ${error.message}`);
+    if (error) throw new AppError("saveFailed", { detail: error.message });
   } catch (err) {
     for (const f of uploaded) {
       await supabase.storage.from(f.bucket).remove([f.path]).catch(() => {});

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { photoSlots, type PhotoKey } from "@/lib/horse-options";
 import { PostHorseForm, type ListingFormData, type Media } from "../../../new/post-horse-form";
@@ -13,8 +14,9 @@ const mediaUrl = (path: string) =>
 /** Loads the seller's listing and opens the listing form, already filled in. */
 export function EditListing({ listingId }: { listingId: string }) {
   const router = useRouter();
+  const t = useTranslations("editListing");
   const [state, setState] = useState<
-    { status: "loading" } | { status: "missing"; message: string } | { status: "ready"; initial: ListingFormData }
+    { status: "loading" } | { status: "missing"; reason: "notFound" | "removed" } | { status: "ready"; initial: ListingFormData }
   >({ status: "loading" });
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export function EditListing({ listingId }: { listingId: string }) {
         .eq("seller_id", session.user.id)
         .maybeSingle();
 
-      if (!l) return setState({ status: "missing", message: "This listing wasn't found in your account." });
+      if (!l) return setState({ status: "missing", reason: "notFound" });
       if (l.status === "removed")
-        return setState({ status: "missing", message: "This listing was removed by EquineTrade and can't be edited." });
+        return setState({ status: "missing", reason: "removed" });
 
       const photos: Partial<Record<PhotoKey, Media>> = {};
       for (const slot of photoSlots) {
@@ -73,15 +75,15 @@ export function EditListing({ listingId }: { listingId: string }) {
   }, [listingId, router]);
 
   if (state.status === "loading") {
-    return <p className="mt-8 text-sm text-muted-foreground">Loading your listing…</p>;
+    return <p className="mt-8 text-sm text-muted-foreground">{t("loading")}</p>;
   }
 
   if (state.status === "missing") {
     return (
       <div className="mt-8 rounded-xl border p-6 text-center">
-        <p className="font-medium">{state.message}</p>
+        <p className="font-medium">{state.reason === "removed" ? t("removed") : t("notFound")}</p>
         <Link href="/sell/listings" className="mt-4 inline-block rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
-          Back to My listings
+          {t("backToMyListings")}
         </Link>
       </div>
     );

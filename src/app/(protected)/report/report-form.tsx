@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { optionKey } from "@/lib/labels";
 
+// Saved in English in the database; shown via messages (report.reasons.*)
 export const reportReasons = [
   "Fake or misleading listing",
   "Horse already sold",
@@ -16,6 +19,7 @@ export const reportReasons = [
 
 export function ReportForm({ listingId, slug }: { listingId: string; slug: string }) {
   const router = useRouter();
+  const t = useTranslations("report");
   const [ready, setReady] = useState(false);
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
@@ -35,8 +39,8 @@ export function ReportForm({ listingId, slug }: { listingId: string; slug: strin
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!reason) return setError("Choose a reason.");
-    if (reason === "Other" && !details.trim()) return setError("Tell us briefly what's wrong.");
+    if (!reason) return setError(t("errReason"));
+    if (reason === "Other" && !details.trim()) return setError(t("errDetails"));
     setBusy(true);
     setError("");
     const { error } = await createClient()
@@ -45,22 +49,22 @@ export function ReportForm({ listingId, slug }: { listingId: string; slug: strin
     setBusy(false);
     if (error) {
       if (error.code === "23505") return setDone(true); // already reported by this person
-      return setError("Couldn't send the report. Please try again.");
+      return setError(t("errSend"));
     }
     setDone(true);
   }
 
-  if (!ready) return <p className="mt-6 text-sm text-muted-foreground">Checking your login…</p>;
+  if (!ready) return <p className="mt-6 text-sm text-muted-foreground">{t("checkingLogin")}</p>;
 
   if (done) {
     return (
       <div className="mt-6 rounded-xl border p-6 text-center">
-        <p className="font-semibold">Thank you. We&apos;ve received your report</p>
+        <p className="font-semibold">{t("doneTitle")}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          We review every report and remove listings that break the rules.
+          {t("doneText")}
         </p>
         <Link href="/horses" className="mt-5 inline-block rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
-          Back to horses
+          {t("backToHorses")}
         </Link>
       </div>
     );
@@ -69,7 +73,7 @@ export function ReportForm({ listingId, slug }: { listingId: string; slug: strin
   return (
     <form onSubmit={submit} className="mt-6 grid gap-5">
       <fieldset className="grid gap-2">
-        <legend className="mb-1 text-sm font-medium">What&apos;s wrong with this listing?</legend>
+        <legend className="mb-1 text-sm font-medium">{t("question")}</legend>
         {reportReasons.map((r) => (
           <label
             key={r}
@@ -88,14 +92,14 @@ export function ReportForm({ listingId, slug }: { listingId: string; slug: strin
               }}
               className="accent-[var(--primary)]"
             />
-            {r}
+            {t(`reasons.${optionKey(r)}`)}
           </label>
         ))}
       </fieldset>
 
       <div className="grid gap-1.5">
         <label htmlFor="details" className="text-sm font-medium">
-          Details {reason === "Other" ? "" : "(optional)"}
+          {reason === "Other" ? t("details") : t("detailsOptional")}
         </label>
         <textarea
           id="details"
@@ -114,7 +118,7 @@ export function ReportForm({ listingId, slug }: { listingId: string; slug: strin
         disabled={busy}
         className="h-12 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
       >
-        {busy ? "Sending…" : "Send report"}
+        {busy ? t("sending") : t("send")}
       </button>
     </form>
   );

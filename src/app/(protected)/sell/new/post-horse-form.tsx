@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { submitListing, updateListing } from "@/lib/submit-listing";
 import { canPrepareVideo, prepareVideo, readVideoDuration } from "@/lib/prepare-video";
+import { AppError, type MessageValues } from "@/lib/app-error";
+import { breedSlug, districtSlug, optionKey } from "@/lib/labels";
 import { breeds, districts, formatInr } from "@/lib/sample-data";
 import {
   genders,
@@ -50,42 +53,66 @@ const empty: ListingFormData = {
   priceInr: "", negotiable: true, district: "", town: "", description: "",
 };
 
-const steps = ["Horse details", "Photos", "Walking video", "Health & training", "Price & location", "Preview"] as const;
+// Step names live in messages (sell.steps.*)
+const steps = ["details", "photos", "video", "health", "price", "preview"] as const;
 
 type Errors = Partial<Record<string, string>>;
 
+// Photo boxes that are simply empty (the box turns red, no extra text)
+const REQUIRED = "required";
+
+type Translate = ReturnType<typeof useTranslations>;
+
+/** Turns an AppError (or anything else) into text in the visitor's language */
+function errorText(t: Translate, err: unknown) {
+  return err instanceof AppError ? t(`errors.${err.key}`, err.values) : t("errors.generic");
+}
+
+/** Shows stored English values (breed, gender, district…) in the visitor's language */
+function useOptionLabels() {
+  const o = useTranslations("options");
+  return {
+    breed: (v: string) => (breedSlug(v) ? o(`breed.${breedSlug(v)}`) : v),
+    gender: (v: string) => (v ? o(`gender.${optionKey(v)}`) : v),
+    training: (v: string) => (v ? o(`training.${optionKey(v)}`) : v),
+    handler: (v: string) => (v ? o(`handler.${optionKey(v)}`) : v),
+    district: (v: string) => (districtSlug(v) ? o(`district.${districtSlug(v)}`) : v),
+    photo: (key: string) => o(`photo.${key}`),
+  };
+}
+
 /* ---------- Validation for each step ---------- */
 
-function validate(step: number, d: ListingFormData): Errors {
+function validate(step: number, d: ListingFormData, t: Translate): Errors {
   const e: Errors = {};
   if (step === 0) {
-    if (!d.breed) e.breed = "Choose the breed.";
-    if (!d.gender) e.gender = "Choose the gender.";
+    if (!d.breed) e.breed = t("errors.breed");
+    if (!d.gender) e.gender = t("errors.gender");
     const age = Number(d.ageYears);
-    if (!d.ageYears || age < 0 || age > 40) e.ageYears = "Enter age in years (0–40).";
+    if (!d.ageYears || age < 0 || age > 40) e.ageYears = t("errors.age");
     const h = Number(d.heightInches);
-    if (!d.heightInches || h < 30 || h > 80) e.heightInches = "Enter height in inches (30–80).";
-    if (!d.colour.trim()) e.colour = "Enter the colour.";
+    if (!d.heightInches || h < 30 || h > 80) e.heightInches = t("errors.height");
+    if (!d.colour.trim()) e.colour = t("errors.colour");
   }
   if (step === 1) {
     for (const slot of photoSlots) {
-      if (!d.photos[slot.key]) e[`photo-${slot.key}`] = "Required";
+      if (!d.photos[slot.key]) e[`photo-${slot.key}`] = REQUIRED;
     }
   }
   if (step === 2) {
-    if (!d.video) e.video = "Add a walking video. Buyers trust listings with video much more.";
+    if (!d.video) e.video = t("errors.video");
   }
   if (step === 3) {
-    if (!d.vaccinated) e.vaccinated = "Choose yes or no.";
-    if (!d.trainingLevel) e.trainingLevel = "Choose the training level.";
-    if (!d.handlerExperience) e.handlerExperience = "Choose the handler's experience.";
-    if (d.gender === "Mare" && !d.pregnant) e.pregnant = "Choose yes or no.";
+    if (!d.vaccinated) e.vaccinated = t("errors.yesNo");
+    if (!d.trainingLevel) e.trainingLevel = t("errors.training");
+    if (!d.handlerExperience) e.handlerExperience = t("errors.handler");
+    if (d.gender === "Mare" && !d.pregnant) e.pregnant = t("errors.yesNo");
   }
   if (step === 4) {
     const p = Number(d.priceInr);
-    if (!d.priceInr || p < 1000) e.priceInr = "Enter the price in rupees.";
-    if (!d.district) e.district = "Choose the district.";
-    if (!d.town.trim()) e.town = "Enter the town or village.";
+    if (!d.priceInr || p < 1000) e.priceInr = t("errors.price");
+    if (!d.district) e.district = t("errors.district");
+    if (!d.town.trim()) e.town = t("errors.town");
   }
   return e;
 }
@@ -95,13 +122,14 @@ function validate(step: number, d: ListingFormData): Errors {
 /** The 6-step listing form. Pass `edit` to change an existing listing instead of posting a new one. */
 export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: ListingFormData } } = {}) {
   const router = useRouter();
+  const t = useTranslations("sell");
   const [checkingLogin, setCheckingLogin] = useState(true);
   const [step, setStep] = useState(0);
   const [data, setData] = useState<ListingFormData>(edit?.initial ?? empty);
   const [errors, setErrors] = useState<Errors>({});
   const [submitState, setSubmitState] = useState<
     | { status: "idle" }
-    | { status: "working"; message: string }
+    | { status: "working"; key: string; values?: MessageValues }
     | { status: "done"; slug: string }
     | { status: "error"; message: string }
   >({ status: "idle" });
@@ -122,7 +150,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
   };
 
   function next() {
-    const e = validate(step, data);
+    const e = validate(step, data, t);
     setErrors(e);
     if (Object.keys(e).length > 0) {
       document.querySelector("[data-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -139,11 +167,11 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
   }
 
   if (checkingLogin) {
-    return <p className="mt-8 text-sm text-muted-foreground">Checking your login…</p>;
+    return <p className="mt-8 text-sm text-muted-foreground">{t("checkingLogin")}</p>;
   }
 
   async function submit() {
-    setSubmitState({ status: "working", message: edit ? "Saving changes…" : "Starting upload…" });
+    setSubmitState({ status: "working", key: edit ? "savingChanges" : "start" });
     try {
       const fields = {
         breed: data.breed,
@@ -162,7 +190,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
         town: data.town,
         description: data.description,
       };
-      const onProgress = (message: string) => setSubmitState({ status: "working", message });
+      const onProgress = (key: string, values?: MessageValues) => setSubmitState({ status: "working", key, values });
 
       if (edit) {
         const slug = await updateListing(
@@ -199,15 +227,12 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
           town: data.town,
           description: data.description,
         },
-        (message) => setSubmitState({ status: "working", message }),
+        onProgress,
       );
       setSubmitState({ status: "done", slug });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setSubmitState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Something went wrong. Please try again.",
-      });
+      setSubmitState({ status: "error", message: errorText(t, err) });
     }
   }
 
@@ -215,21 +240,19 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
     return (
       <div className="mt-8 rounded-xl border p-6 text-center">
         <p className="text-3xl" aria-hidden>✓</p>
-        <p className="mt-2 text-lg font-semibold">{edit ? "Changes saved" : "Your horse is now live"}</p>
+        <p className="mt-2 text-lg font-semibold">{edit ? t("done.savedTitle") : t("done.liveTitle")}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          {edit
-            ? "Buyers will see the updated listing within a minute."
-            : "Buyers can find it in search right away. You can mark it as sold or remove it any time from Account → My listings."}
+          {edit ? t("done.savedText") : t("done.liveText")}
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link href={`/horses/${submitState.slug}`} className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
-            View listing
+            {t("done.viewListing")}
           </Link>
           <Link href="/sell/listings" className="rounded-lg border px-4 py-2.5 text-sm hover:bg-muted">
-            My listings
+            {t("done.myListings")}
           </Link>
           <Link href="/" className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
-            Go to Home
+            {t("done.goHome")}
           </Link>
         </div>
       </div>
@@ -253,7 +276,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
 
       {working && (
         <p role="status" className="mt-6 rounded-xl border p-4 text-sm font-medium">
-          {submitState.message}
+          {t(`progress.${submitState.key}`, submitState.values)}
         </p>
       )}
       {submitState.status === "error" && (
@@ -267,7 +290,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
         <div className="mx-auto flex max-w-2xl gap-3">
           {step > 0 && (
             <button type="button" onClick={back} disabled={working} className="h-12 rounded-lg border px-5 text-sm font-medium hover:bg-muted disabled:opacity-50">
-              Back
+              {t("back")}
             </button>
           )}
           {step < steps.length - 1 ? (
@@ -276,7 +299,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
               onClick={next}
               className="h-12 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Next: {steps[step + 1]}
+              {t("next", { step: t(`steps.${steps[step + 1]}`) })}
             </button>
           ) : (
             <button
@@ -285,7 +308,9 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
               disabled={working}
               className="h-12 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
-              {working ? (edit ? "Saving…" : "Uploading…") : submitState.status === "error" ? "Try again" : edit ? "Save changes" : "Submit listing"}
+              {working
+                ? edit ? t("saving") : t("uploading")
+                : submitState.status === "error" ? t("tryAgain") : edit ? t("saveChanges") : t("submit")}
             </button>
           )}
         </div>
@@ -297,11 +322,12 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
 /* ---------- Progress bar ---------- */
 
 function Progress({ step }: { step: number }) {
+  const t = useTranslations("sell");
   return (
     <div>
       <div className="flex items-baseline justify-between text-sm">
-        <p className="font-medium">{steps[step]}</p>
-        <p className="text-muted-foreground">Step {step + 1} of {steps.length}</p>
+        <p className="font-medium">{t(`steps.${steps[step]}`)}</p>
+        <p className="text-muted-foreground">{t("stepOf", { n: step + 1, total: steps.length })}</p>
       </div>
       <div className="mt-2 flex gap-1" aria-hidden>
         {steps.map((s, i) => (
@@ -362,6 +388,7 @@ function Select({
 function YesNo({
   id, value, onChange, error,
 }: { id: string; value: string; onChange: (v: "yes" | "no") => void; error?: string }) {
+  const tc = useTranslations("common");
   return (
     <div id={id} role="radiogroup" className="grid grid-cols-2 gap-2">
       {(["yes", "no"] as const).map((v) => (
@@ -371,11 +398,11 @@ function YesNo({
           role="radio"
           aria-checked={value === v}
           onClick={() => onChange(v)}
-          className={`h-12 rounded-lg border text-sm font-medium capitalize ${
+          className={`h-12 rounded-lg border text-sm font-medium ${
             value === v ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"
           } ${error ? "border-destructive" : ""}`}
         >
-          {v}
+          {tc(v)}
         </button>
       ))}
     </div>
@@ -385,39 +412,44 @@ function YesNo({
 /* ---------- Step 1: details ---------- */
 
 function DetailsStep({ data, set, errors }: StepProps) {
+  const t = useTranslations("sell.fields");
+  const label = useOptionLabels();
   return (
     <div className="grid gap-5">
-      <Field id="breed" label="Breed" error={errors.breed}>
+      <Field id="breed" label={t("breed")} error={errors.breed}>
         <Select
           id="breed" value={data.breed} onChange={(v) => set("breed", v)} error={errors.breed}
-          placeholder="Choose breed"
-          options={[...breeds.map((b) => ({ value: b.name, label: b.name })), { value: "Other", label: "Other" }]}
+          placeholder={t("chooseBreed")}
+          options={[...breeds.map((b) => b.name), "Other"].map((v) => ({ value: v, label: label.breed(v) }))}
         />
       </Field>
-      <Field id="gender" label="Gender" error={errors.gender}>
-        <Select id="gender" value={data.gender} onChange={(v) => set("gender", v)} options={genders} placeholder="Choose gender" error={errors.gender} />
+      <Field id="gender" label={t("gender")} error={errors.gender}>
+        <Select
+          id="gender" value={data.gender} onChange={(v) => set("gender", v)} error={errors.gender}
+          placeholder={t("chooseGender")} options={genders.map((v) => ({ value: v, label: label.gender(v) }))}
+        />
       </Field>
       <div className="grid grid-cols-2 gap-4">
-        <Field id="age" label="Age (years)" error={errors.ageYears}>
+        <Field id="age" label={t("age")} error={errors.ageYears}>
           <input
             id="age" type="number" inputMode="numeric" min={0} max={40} value={data.ageYears}
             onChange={(e) => set("ageYears", e.target.value)} aria-invalid={!!errors.ageYears} className={inputClass}
           />
         </Field>
-        <Field id="height" label="Height (inches)" hint="Ground to withers" error={errors.heightInches}>
+        <Field id="height" label={t("height")} hint={t("heightHint")} error={errors.heightInches}>
           <input
             id="height" type="number" inputMode="numeric" min={30} max={80} value={data.heightInches}
             onChange={(e) => set("heightInches", e.target.value)} aria-invalid={!!errors.heightInches} className={inputClass}
           />
         </Field>
       </div>
-      <Field id="colour" label="Colour" hint="Tamil or English, e.g. Bay, black, karuppu, sivappu" error={errors.colour}>
+      <Field id="colour" label={t("colour")} hint={t("colourHint")} error={errors.colour}>
         <input
           id="colour" type="text" maxLength={40} value={data.colour}
           onChange={(e) => set("colour", e.target.value)} aria-invalid={!!errors.colour} className={inputClass}
         />
       </Field>
-      <Field id="markings" label="Markings / suzhi (optional)" hint="e.g. white star on forehead, white socks on hind legs">
+      <Field id="markings" label={t("markings")} hint={t("markingsHint")}>
         <input
           id="markings" type="text" maxLength={120} value={data.markings}
           onChange={(e) => set("markings", e.target.value)} className={inputClass}
@@ -437,14 +469,17 @@ function PhotosStep({
   errors: Errors;
   setErrors: React.Dispatch<React.SetStateAction<Errors>>;
 }) {
+  const t = useTranslations("sell");
+  const label = useOptionLabels();
+
   function pick(key: PhotoKey, file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setErrors((e) => ({ ...e, [`photo-${key}`]: "Choose a photo file." }));
+      setErrors((e) => ({ ...e, [`photo-${key}`]: t("errors.photoNotImage") }));
       return;
     }
     if (file.size > limits.photoMb * 1024 * 1024) {
-      setErrors((e) => ({ ...e, [`photo-${key}`]: `Photo must be under ${limits.photoMb} MB.` }));
+      setErrors((e) => ({ ...e, [`photo-${key}`]: t("errors.photoTooBig", { mb: limits.photoMb }) }));
       return;
     }
     setData((d) => {
@@ -460,10 +495,10 @@ function PhotosStep({
   return (
     <div>
       <p className="text-sm text-muted-foreground">
-        Take each photo in daylight with the whole horse in frame. Tap a box to use the camera or gallery.
+        {t("photosIntro")}
       </p>
       {missing && (
-        <p data-error className="mt-3 text-sm text-destructive">Add all 5 photos to continue.</p>
+        <p data-error className="mt-3 text-sm text-destructive">{t("errors.allPhotos")}</p>
       )}
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {photoSlots.map((slot, i) => {
@@ -478,17 +513,17 @@ function PhotosStep({
               >
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local preview of the seller's own file
-                  <img src={photo.url} alt={slot.label} className="absolute inset-0 size-full object-cover" />
+                  <img src={photo.url} alt={label.photo(slot.key)} className="absolute inset-0 size-full object-cover" />
                 ) : (
                   <span className="px-2">
                     <span className="block text-2xl text-muted-foreground" aria-hidden>+</span>
-                    <span className="block text-sm font-medium">{slot.label}</span>
-                    <span className="mt-0.5 block text-[11px] leading-tight text-muted-foreground">{slot.hint}</span>
+                    <span className="block text-sm font-medium">{label.photo(slot.key)}</span>
+                    <span className="mt-0.5 block text-[11px] leading-tight text-muted-foreground">{t(`photoHint.${slot.key}`)}</span>
                   </span>
                 )}
                 {photo && (
                   <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1 text-xs text-white">
-                    {slot.label}{i === 0 ? " · cover" : ""} · tap to change
+                    {label.photo(slot.key)}{i === 0 ? ` · ${t("cover")}` : ""} · {t("tapToChange")}
                   </span>
                 )}
                 <input
@@ -498,7 +533,7 @@ function PhotosStep({
                   onChange={(e) => pick(slot.key, e.target.files?.[0])}
                 />
               </label>
-              {error && error !== "Required" && <p className="mt-1 text-xs text-destructive">{error}</p>}
+              {error && error !== REQUIRED && <p className="mt-1 text-xs text-destructive">{error}</p>}
             </li>
           );
         })}
@@ -515,6 +550,8 @@ type Pending = { file: File; url: string; duration: number; start: number };
 function VideoStep({
   data, set, errors, setErrors,
 }: StepProps & { setErrors: React.Dispatch<React.SetStateAction<Errors>> }) {
+  const t = useTranslations("sell");
+  const tv = useTranslations("sell.video");
   const max = limits.videoSeconds;
   const [reading, setReading] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -525,7 +562,7 @@ function VideoStep({
 
   async function pick(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("video/")) return showError("Choose a video file.");
+    if (!file.type.startsWith("video/")) return showError(t("errors.videoNotVideo"));
     setErrors((e) => ({ ...e, video: undefined }));
     if (pending) URL.revokeObjectURL(pending.url);
     setPending(null);
@@ -538,7 +575,7 @@ function VideoStep({
     } catch (err) {
       setReading(false);
       URL.revokeObjectURL(url);
-      return showError(err instanceof Error ? err.message : "This video can't be played.");
+      return showError(errorText(t, err));
     }
     setReading(false);
 
@@ -548,8 +585,8 @@ function VideoStep({
     if (!canPrepareVideo()) {
       // Older browsers can't shorten videos, so the seller must record a short one
       URL.revokeObjectURL(url);
-      if (tooLong) return showError(`This video is ${Math.round(duration)} seconds. Please record a new video of ${max} seconds or less.`);
-      if (tooBig) return showError("This video file is too large. Please record a shorter or lower-quality video.");
+      if (tooLong) return showError(t("errors.videoTooLong", { seconds: Math.round(duration), max }));
+      if (tooBig) return showError(t("errors.videoTooBig"));
       return accept({ file, seconds: Math.round(duration) }, url);
     }
 
@@ -578,7 +615,7 @@ function VideoStep({
       setPending(null);
       accept(result, URL.createObjectURL(result.file));
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Couldn't prepare the video. Please try again.");
+      showError(errorText(t, err));
     } finally {
       setPreparing(null);
     }
@@ -597,11 +634,11 @@ function VideoStep({
   return (
     <div className="grid gap-4">
       <div className="rounded-xl bg-muted p-4 text-sm">
-        <p className="font-medium">How to record</p>
+        <p className="font-medium">{tv("howTitle")}</p>
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-          <li>Have someone walk the horse towards you, then away, then past you.</li>
-          <li>Record in daylight, holding the phone sideways.</li>
-          <li>{max} seconds is enough. Longer videos are shortened here; you choose which part to keep.</li>
+          <li>{tv("how1")}</li>
+          <li>{tv("how2")}</li>
+          <li>{tv("how3", { max })}</li>
         </ul>
       </div>
 
@@ -609,8 +646,11 @@ function VideoStep({
       {pending && preparing === null && (
         <div className="grid gap-3 rounded-xl border p-4">
           <p className="text-sm">
-            Your video is <span className="font-medium">{Math.round(pending.duration)} seconds</span>.
-            Choose the best {max} seconds to keep.
+            {tv.rich("tooLong", {
+              seconds: Math.round(pending.duration),
+              max,
+              b: (c) => <span className="font-medium">{c}</span>,
+            })}
           </p>
           <video
             ref={previewRef}
@@ -624,7 +664,10 @@ function VideoStep({
             className="aspect-video w-full rounded-lg bg-black"
           />
           <label htmlFor="video-start" className="text-sm font-medium">
-            Keep from {formatTime(pending.start)} to {formatTime(Math.min(pending.start + max, pending.duration))}
+            {tv("keepRange", {
+              from: formatTime(pending.start),
+              to: formatTime(Math.min(pending.start + max, pending.duration)),
+            })}
           </label>
           <input
             id="video-start"
@@ -648,7 +691,7 @@ function VideoStep({
             onClick={() => runPrepare(pending.url, pending.start, max)}
             className="h-12 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Use these {max} seconds
+            {tv("useSeconds", { max })}
           </button>
         </div>
       )}
@@ -656,8 +699,8 @@ function VideoStep({
       {/* Preparing (shortening / shrinking) */}
       {preparing !== null && (
         <div role="status" className="rounded-xl border p-4">
-          <p className="text-sm font-medium">Preparing your video… {Math.round(preparing * 100)}%</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Keep this screen open. It takes about {max} seconds.</p>
+          <p className="text-sm font-medium">{tv("preparing", { percent: Math.round(preparing * 100) })}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{tv("preparingHint", { max })}</p>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-primary transition-[width]" style={{ width: `${preparing * 100}%` }} />
           </div>
@@ -669,7 +712,8 @@ function VideoStep({
         <div>
           <video src={data.video.url} controls playsInline className="aspect-video w-full rounded-xl bg-black" />
           <p className="mt-2 text-sm text-muted-foreground">
-            {data.video.seconds} seconds · {data.video.file ? `${(data.video.file.size / 1024 / 1024).toFixed(1)} MB` : "Current video"}
+            {tv("seconds", { seconds: data.video.seconds })} ·{" "}
+            {data.video.file ? `${(data.video.file.size / 1024 / 1024).toFixed(1)} MB` : tv("current")}
           </p>
         </div>
       )}
@@ -680,7 +724,7 @@ function VideoStep({
             errors.video ? "border-destructive" : ""
           }`}
         >
-          {data.video || pending ? "Choose a different video" : "+ Record or choose walking video"}
+          {data.video || pending ? tv("chooseDifferent") : `+ ${tv("choose")}`}
           <input
             type="file"
             accept="video/*"
@@ -692,7 +736,7 @@ function VideoStep({
           />
         </label>
       )}
-      {reading && <p className="text-sm text-muted-foreground">Checking video…</p>}
+      {reading && <p className="text-sm text-muted-foreground">{tv("checking")}</p>}
       {errors.video && <p data-error className="text-sm text-destructive">{errors.video}</p>}
     </div>
   );
@@ -706,15 +750,17 @@ function formatTime(seconds: number) {
 /* ---------- Step 4: health & training ---------- */
 
 function HealthStep({ data, set, errors }: StepProps) {
+  const t = useTranslations("sell.fields");
+  const label = useOptionLabels();
   return (
     <div className="grid gap-5">
-      <Field id="vaccinated" label="Vaccinated?" error={errors.vaccinated}>
+      <Field id="vaccinated" label={t("vaccinated")} error={errors.vaccinated}>
         <YesNo id="vaccinated" value={data.vaccinated} onChange={(v) => set("vaccinated", v)} error={errors.vaccinated} />
       </Field>
 
-      <Field id="vet" label="Vet certificate (optional)" hint="A photo or PDF of the certificate. Builds buyer trust.">
+      <Field id="vet" label={t("vet")} hint={t("vetHint")}>
         <label className="flex h-12 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed px-3 text-sm hover:border-primary">
-          <span className="truncate">{data.vetCertificate ? `✓ ${data.vetCertificate.file?.name ?? "Certificate on file (tap to replace)"}` : "+ Upload certificate"}</span>
+          <span className="truncate">{data.vetCertificate ? `✓ ${data.vetCertificate.file?.name ?? t("vetOnFile")}` : `+ ${t("vetUpload")}`}</span>
           <input
             id="vet" type="file" accept="image/*,application/pdf" className="sr-only"
             onChange={(e) => {
@@ -725,16 +771,22 @@ function HealthStep({ data, set, errors }: StepProps) {
         </label>
       </Field>
 
-      <Field id="training" label="Training level" error={errors.trainingLevel}>
-        <Select id="training" value={data.trainingLevel} onChange={(v) => set("trainingLevel", v)} options={trainingLevels} placeholder="Choose training level" error={errors.trainingLevel} />
+      <Field id="training" label={t("training")} error={errors.trainingLevel}>
+        <Select
+          id="training" value={data.trainingLevel} onChange={(v) => set("trainingLevel", v)} error={errors.trainingLevel}
+          placeholder={t("chooseTraining")} options={trainingLevels.map((v) => ({ value: v, label: label.training(v) }))}
+        />
       </Field>
 
-      <Field id="handler" label="Handler's Experience" error={errors.handlerExperience}>
-        <Select id="handler" value={data.handlerExperience} onChange={(v) => set("handlerExperience", v)} options={handlerExperience} placeholder="Choose experience level" error={errors.handlerExperience} />
+      <Field id="handler" label={t("handler")} error={errors.handlerExperience}>
+        <Select
+          id="handler" value={data.handlerExperience} onChange={(v) => set("handlerExperience", v)} error={errors.handlerExperience}
+          placeholder={t("chooseHandler")} options={handlerExperience.map((v) => ({ value: v, label: label.handler(v) }))}
+        />
       </Field>
 
       {data.gender === "Mare" && (
-        <Field id="pregnant" label="Is the mare pregnant?" error={errors.pregnant}>
+        <Field id="pregnant" label={t("pregnant")} error={errors.pregnant}>
           <YesNo id="pregnant" value={data.pregnant} onChange={(v) => set("pregnant", v)} error={errors.pregnant} />
         </Field>
       )}
@@ -745,16 +797,18 @@ function HealthStep({ data, set, errors }: StepProps) {
 /* ---------- Step 5: price & location ---------- */
 
 function PriceStep({ data, set, errors }: StepProps) {
+  const t = useTranslations("sell.fields");
+  const label = useOptionLabels();
   return (
     <div className="grid gap-5">
       <Field
-        id="price" label="Price (₹)" error={errors.priceInr}
+        id="price" label={t("price")} error={errors.priceInr}
         hint={data.priceInr && Number(data.priceInr) >= 1000 ? formatInr(Number(data.priceInr)) : undefined}
       >
         <input
           id="price" type="text" inputMode="numeric" value={data.priceInr}
           onChange={(e) => set("priceInr", e.target.value.replace(/\D/g, "").slice(0, 9))}
-          aria-invalid={!!errors.priceInr} className={inputClass} placeholder="e.g. 150000"
+          aria-invalid={!!errors.priceInr} className={inputClass} placeholder={t("pricePlaceholder")}
         />
       </Field>
 
@@ -763,17 +817,17 @@ function PriceStep({ data, set, errors }: StepProps) {
           type="checkbox" checked={data.negotiable} onChange={(e) => set("negotiable", e.target.checked)}
           className="size-5 accent-[var(--primary)]"
         />
-        Price is negotiable
+        {t("negotiable")}
       </label>
 
-      <Field id="district" label="District" error={errors.district}>
+      <Field id="district" label={t("district")} error={errors.district}>
         <Select
           id="district" value={data.district} onChange={(v) => set("district", v)} error={errors.district}
-          placeholder="Choose district" options={districts.map((d) => ({ value: d.name, label: d.name }))}
+          placeholder={t("chooseDistrict")} options={districts.map((d) => ({ value: d.name, label: label.district(d.name) }))}
         />
       </Field>
 
-      <Field id="town" label="Town or village" error={errors.town}>
+      <Field id="town" label={t("town")} error={errors.town}>
         <input
           id="town" type="text" maxLength={60} value={data.town}
           onChange={(e) => set("town", e.target.value)} aria-invalid={!!errors.town} className={inputClass}
@@ -781,8 +835,8 @@ function PriceStep({ data, set, errors }: StepProps) {
       </Field>
 
       <Field
-        id="description" label="About the horse (optional)" error={errors.description}
-        hint={`${data.description.length}/${limits.descriptionChars} · Tamil or English. Health, habits, why you're selling.`}
+        id="description" label={t("about")} error={errors.description}
+        hint={t("aboutHint", { count: data.description.length, max: limits.descriptionChars })}
       >
         <textarea
           id="description" rows={5} maxLength={limits.descriptionChars} value={data.description}
@@ -797,24 +851,29 @@ function PriceStep({ data, set, errors }: StepProps) {
 /* ---------- Step 6: preview ---------- */
 
 function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: number) => void }) {
+  const t = useTranslations("sell.preview");
+  const td = useTranslations("detail");
+  const tc = useTranslations("common");
+  const label = useOptionLabels();
+  const yesNo = (v: string) => (v === "yes" ? tc("yes") : tc("no"));
   const rows: [string, string, number][] = [
-    ["Breed", data.breed, 0],
-    ["Gender", data.gender, 0],
-    ["Age", `${data.ageYears} years`, 0],
-    ["Height", `${data.heightInches} inches`, 0],
-    ["Colour", data.colour, 0],
-    ["Markings", data.markings || "—", 0],
-    ["Vaccinated", data.vaccinated === "yes" ? "Yes" : "No", 3],
-    ["Vet certificate", data.vetCertificate ? "Uploaded" : "Not provided", 3],
-    ["Training", data.trainingLevel, 3],
-    ["Handler's Experience", data.handlerExperience, 3],
-    ...(data.gender === "Mare" ? [["Pregnant", data.pregnant === "yes" ? "Yes" : "No", 3] as [string, string, number]] : []),
-    ["Location", `${data.town}, ${data.district}`, 4],
+    [td("breed"), label.breed(data.breed), 0],
+    [td("gender"), label.gender(data.gender), 0],
+    [td("age"), tc("yearsLong", { count: Number(data.ageYears) }), 0],
+    [td("height"), tc("inches", { count: Number(data.heightInches) }), 0],
+    [td("colour"), data.colour, 0],
+    [td("markings"), data.markings || "—", 0],
+    [td("vaccinated"), yesNo(data.vaccinated), 3],
+    [td("vetCertificate"), data.vetCertificate ? t("uploaded") : td("notProvided"), 3],
+    [td("training"), label.training(data.trainingLevel), 3],
+    [td("handler"), label.handler(data.handlerExperience), 3],
+    ...(data.gender === "Mare" ? [[td("pregnant"), yesNo(data.pregnant), 3] as [string, string, number]] : []),
+    [t("location"), `${data.town}, ${label.district(data.district)}`, 4],
   ];
 
   return (
     <div>
-      <p className="text-sm text-muted-foreground">This is how buyers will see your listing. Tap Edit to change anything.</p>
+      <p className="text-sm text-muted-foreground">{t("intro")}</p>
 
       {data.video && (
         <video src={data.video.url} controls playsInline className="mt-4 aspect-video w-full rounded-xl bg-black" />
@@ -825,20 +884,20 @@ function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: numbe
           return (
             <li key={slot.key} className="aspect-square overflow-hidden rounded-lg bg-muted">
               {/* eslint-disable-next-line @next/next/no-img-element -- local preview */}
-              {p && <img src={p.url} alt={slot.label} className="size-full object-cover" />}
+              {p && <img src={p.url} alt={label.photo(slot.key)} className="size-full object-cover" />}
             </li>
           );
         })}
       </ul>
       <button type="button" onClick={() => goTo(1)} className="mt-2 text-sm text-primary hover:underline">
-        Edit photos or video
+        {t("editMedia")}
       </button>
 
-      <h2 className="mt-6 text-2xl font-semibold">{data.breed} {data.gender.toLowerCase()}</h2>
+      <h2 className="mt-6 text-2xl font-semibold">{label.breed(data.breed)} {label.gender(data.gender).toLowerCase()}</h2>
       <p className="mt-1 text-2xl font-semibold">
         {formatInr(Number(data.priceInr))}
         <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-          {data.negotiable ? "Negotiable" : "Fixed price"}
+          {data.negotiable ? tc("negotiable") : tc("fixedPrice")}
         </span>
       </p>
 
@@ -849,7 +908,7 @@ function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: numbe
             <dd className="flex items-center gap-3 text-right font-medium">
               {value}
               <button type="button" onClick={() => goTo(stepIndex)} className="text-xs font-normal text-primary hover:underline">
-                Edit
+                {t("edit")}
               </button>
             </dd>
           </div>
@@ -858,19 +917,18 @@ function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: numbe
 
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
-          <h3 className="font-semibold">About the horse</h3>
-          <button type="button" onClick={() => goTo(4)} className="text-xs text-primary hover:underline">Edit</button>
+          <h3 className="font-semibold">{t("about")}</h3>
+          <button type="button" onClick={() => goTo(4)} className="text-xs text-primary hover:underline">{t("edit")}</button>
         </div>
         {data.description.trim() ? (
           <p className="mt-1 whitespace-pre-line leading-relaxed">{data.description}</p>
         ) : (
-          <p className="mt-1 text-sm text-muted-foreground">Not added. Optional, but a few lines help buyers.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("aboutEmpty")}</p>
         )}
       </div>
 
       <p className="mt-6 rounded-xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
-        Your listing goes live as soon as you submit. Buyers can report listings, and
-        listings of sick, injured or underage horses, or with fake details, are removed.
+        {t("rules")}
       </p>
     </div>
   );

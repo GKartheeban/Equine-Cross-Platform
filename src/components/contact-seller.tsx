@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageCircle, Phone } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/track";
 
 type State =
   | { status: "loading" }
@@ -27,6 +29,7 @@ export function ContactSeller({
   title: string;
   compact?: boolean;
 }) {
+  const t = useTranslations("contact");
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
@@ -69,12 +72,10 @@ export function ContactSeller({
           className={`${base} ${size} border-primary text-primary hover:bg-primary/5`}
         >
           <Phone className="size-4" aria-hidden />
-          {compact ? "Login to contact" : "Login to contact seller"}
+          {compact ? t("loginToContact") : t("loginToContactSeller")}
         </Link>
         {!compact && (
-          <p className="text-center text-xs text-muted-foreground">
-            Free. Log in with your mobile number to call or WhatsApp the seller.
-          </p>
+          <p className="text-center text-xs text-muted-foreground">{t("loginHint")}</p>
         )}
       </div>
     );
@@ -82,26 +83,32 @@ export function ContactSeller({
 
   if (state.status === "error") {
     return (
-      <p className="text-sm text-muted-foreground">
-        Seller contact isn&apos;t available right now. Please try again later.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("unavailable")}</p>
     );
   }
 
   const pageUrl = typeof window !== "undefined" ? `${window.location.origin}/horses/${slug}` : "";
-  const message = `Hi, I saw your ${title} on EquineTrade: ${pageUrl} Is it still available?`;
+  const message = t("whatsappMessage", { title, url: pageUrl });
   const whatsapp = `https://wa.me/91${state.phone}?text=${encodeURIComponent(message)}`;
   const display = `+91 ${state.phone.slice(0, 5)} ${state.phone.slice(5)}`;
 
   return (
     <div className={wrap}>
-      <a href={`tel:+91${state.phone}`} className={`${base} ${size} border-primary text-primary hover:bg-primary/5`}>
+      <a
+        href={`tel:+91${state.phone}`}
+        onClick={() => track("call", { listingId })}
+        className={`${base} ${size} border-primary text-primary hover:bg-primary/5`}>
         <Phone className="size-4" aria-hidden />
-        {compact ? "Call" : `Call ${display}`}
+        {compact ? t("call") : t("callNumber", { number: display })}
       </a>
-      <a href={whatsapp} target="_blank" rel="noopener" className={`${base} ${size} border-[#25D366] hover:bg-[#25D366]/5`}>
+      <a
+        href={whatsapp}
+        target="_blank"
+        rel="noopener"
+        onClick={() => track("whatsapp", { listingId })}
+        className={`${base} ${size} border-[#25D366] hover:bg-[#25D366]/5`}>
         <MessageCircle className="size-4 text-[#25D366]" aria-hidden />
-        WhatsApp
+        {t("whatsapp")}
       </a>
     </div>
   );

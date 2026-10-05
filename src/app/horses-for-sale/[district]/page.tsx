@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { BrowseListings } from "@/components/browse-listings";
 import { searchListings } from "@/lib/listings";
 import { districts } from "@/lib/sample-data";
 
-// Refresh at most once a minute; all 38 district pages are built ahead of time
+// Database results are reused for up to a minute; only the 38 districts have pages
 export const revalidate = 60;
 export const dynamicParams = false;
 
@@ -14,32 +15,41 @@ export function generateStaticParams() {
 
 type Props = { params: Promise<{ district: string }> };
 
+async function texts(slug: string) {
+  const [t, o] = await Promise.all([getTranslations("browse"), getTranslations("options")]);
+  const name = o(`district.${slug}`);
+  return { t, o, name, heading: t("districtHeading", { district: name }) };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { district: slug } = await params;
-  const district = districts.find((d) => d.slug === slug);
-  if (!district) return {};
-  const title = `Horses for sale in ${district.name}`;
+  if (!districts.some((d) => d.slug === slug)) return {};
+  const { t, heading } = await texts(slug);
   return {
-    title: `${title} | EquineTrade`,
-    description: `${title}, Tamil Nadu. Marwari, Kathiawari, country horses and more, with photos, walking videos and prices. Call or WhatsApp sellers directly.`,
+    title: `${heading} | EquineTrade`,
+    description: t("districtMeta", { heading }),
+    alternates: { canonical: `/horses-for-sale/${slug}` },
+    openGraph: { title: heading, description: t("districtMeta", { heading }), images: ["/og"] },
   };
 }
 
 export default async function DistrictPage({ params }: Props) {
   const { district: slug } = await params;
-  const district = districts.find((d) => d.slug === slug);
-  if (!district) notFound();
+  if (!districts.some((d) => d.slug === slug)) notFound();
 
-  const listings = await searchListings({ breed: "", district: slug, price: "", gender: "", sort: "newest" });
+  const [listings, { t, o, name, heading }] = await Promise.all([
+    searchListings({ breed: "", district: slug, price: "", gender: "", sort: "newest" }),
+    texts(slug),
+  ]);
 
   return (
     <BrowseListings
-      heading={`Horses for sale in ${district.name}`}
-      intro={`Horses listed by sellers in and around ${district.name}. See each horse's photos and walking video, then call or WhatsApp the seller before you travel.`}
+      heading={heading}
+      intro={t("districtIntro", { district: name })}
       listings={listings}
       searchHref={`/horses?district=${slug}`}
-      chipsHeading="Other districts"
-      chips={districts.map((d) => ({ href: `/horses-for-sale/${d.slug}`, label: d.name, active: d.slug === slug }))}
+      chipsHeading={t("otherDistricts")}
+      chips={districts.map((d) => ({ href: `/horses-for-sale/${d.slug}`, label: o(`district.${d.slug}`), active: d.slug === slug }))}
     />
   );
 }

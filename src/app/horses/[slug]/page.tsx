@@ -2,14 +2,24 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { cache } from "react";
 import { ContactSeller } from "@/components/contact-seller";
 import { ListingCard } from "@/components/listing-card";
+import { SaveButton } from "@/components/save-button";
+import { TrackEvent } from "@/components/track-event";
 import { photoSlots } from "@/lib/horse-options";
-import { getListingBySlug, getSimilarListings, type Listing } from "@/lib/listings";
-import { formatInr, postedLabel } from "@/lib/sample-data";
+import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
+import {
+  getListingBySlug,
+  getSellerProfile,
+  getSimilarListings,
+  type Listing,
+  type SellerProfile,
+} from "@/lib/listings";
+import { formatInr } from "@/lib/sample-data";
 
-// Rebuild each horse page at most once a minute (e.g. after it's marked sold)
+// Database results are reused for up to a minute (e.g. after it's marked sold)
 export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
@@ -17,23 +27,36 @@ type Props = { params: Promise<{ slug: string }> };
 // Loads the listing once, shared by the page and its metadata
 const loadListing = cache(getListingBySlug);
 
+/** Breed, gender, district, training, handler shown in the visitor's language. */
+async function labelsFor(horse: Listing) {
+  const o = await getTranslations("options");
+  const b = breedSlug(horse.breed);
+  const d = districtSlug(horse.district);
+  return {
+    breed: b ? o(`breed.${b}`) : horse.breed,
+    gender: o(`gender.${optionKey(horse.gender)}`),
+    district: d ? o(`district.${d}`) : horse.district,
+    training: o(`training.${optionKey(horse.trainingLevel)}`),
+    handler: o(`handler.${optionKey(horse.handlerExperience)}`),
+  };
+}
+
 // Page title, description and photo for Google and WhatsApp link previews
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const horse = await loadListing(slug);
-  if (!horse) return { title: "Horse not found | EquineTrade" };
-  const title = `${horse.breed} ${horse.gender.toLowerCase()} for sale in ${horse.district} – ${formatInr(horse.priceInr)}`;
-  const description = `${horse.ageYears} years, ${horse.heightInches} inches, ${horse.colour}. ${horse.town}, ${horse.district}.${
+  const t = await getTranslations("detail");
+  if (!horse) return { title: `${t("notFound")} | EquineTrade` };
+  const [l, c] = await Promise.all([labelsFor(horse), getTranslations("common")]);
+  const title = t("metaTitle", { breed: l.breed, gender: l.gender, district: l.district, price: formatInr(horse.priceInr) });
+  const description = `${c("yearsLong", { count: horse.ageYears })}, ${c("inches", { count: horse.heightInches })}, ${horse.colour}. ${horse.town}, ${l.district}.${
     horse.description ? ` ${horse.description}` : ""
   }`;
   return {
     title: `${title} | EquineTrade`,
     description,
-    openGraph: {
-      title,
-      description,
-      images: horse.coverUrl ? [{ url: horse.coverUrl }] : undefined,
-    },
+    alternates: { canonical: `/horses/${horse.slug}` },
+    openGraph: { type: "article", title, description, images: horse.coverUrl ? [{ url: horse.coverUrl }] : undefined },
   };
 }
 
@@ -42,31 +65,40 @@ export default async function HorseDetailPage({ params }: Props) {
   const horse = await loadListing(slug);
   if (!horse) notFound();
 
-  const similar = await getSimilarListings(horse);
-  const title = `${horse.breed} ${horse.gender.toLowerCase()}`;
+  const [similar, seller, l, t, c, o, locale] = await Promise.all([
+    getSimilarListings(horse),
+    getSellerProfile(horse.sellerId),
+    labelsFor(horse),
+    getTranslations("detail"),
+    getTranslations("common"),
+    getTranslations("options"),
+    getLocale(),
+  ]);
+  const title = `${l.breed} · ${l.gender}`;
+  const posted = horse.postedDaysAgo === 0 ? c("today") : c("daysAgo", { count: horse.postedDaysAgo });
 
   const facts: [string, string][] = [
-    ["Breed", horse.breed],
-    ["Gender", horse.gender],
-    ["Age", `${horse.ageYears} years`],
-    ["Height", `${horse.heightInches} inches`],
-    ["Colour", horse.colour],
-    ...(horse.markings ? [["Markings", horse.markings] as [string, string]] : []),
+    [t("breed"), l.breed],
+    [t("gender"), l.gender],
+    [t("age"), c("yearsLong", { count: horse.ageYears })],
+    [t("height"), c("inches", { count: horse.heightInches })],
+    [t("colour"), horse.colour],
+    ...(horse.markings ? [[t("markings"), horse.markings] as [string, string]] : []),
   ];
   const health: [string, string][] = [
-    ["Vaccinated", horse.vaccinated ? "Yes" : "No"],
-    ["Vet certificate", horse.vetCertificate ? "Available" : "Not provided"],
-    ["Training", horse.trainingLevel],
-    ["Handler's Experience", horse.handlerExperience],
-    ...(horse.pregnant !== null ? [["Pregnant", horse.pregnant ? "Yes" : "No"] as [string, string]] : []),
+    [t("vaccinated"), horse.vaccinated ? c("yes") : c("no")],
+    [t("vetCertificate"), horse.vetCertificate ? t("available") : t("notProvided")],
+    [t("training"), l.training],
+    [t("handler"), l.handler],
+    ...(horse.pregnant !== null ? [[t("pregnant"), horse.pregnant ? c("yes") : c("no")] as [string, string]] : []),
   ];
 
-  // Structured data: lets Google show price and photo in search results
+  // Structured data (always English): lets Google show price and photo in search results
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: `${title} – ${horse.district}`,
-    description: horse.description ?? `${title} for sale in ${horse.town}, ${horse.district}`,
+    name: `${horse.breed} ${horse.gender.toLowerCase()} – ${horse.district}`,
+    description: horse.description ?? `${horse.breed} ${horse.gender.toLowerCase()} for sale in ${horse.town}, ${horse.district}`,
     image: Object.values(horse.photoUrls),
     offers: {
       "@type": "Offer",
@@ -76,8 +108,13 @@ export default async function HorseDetailPage({ params }: Props) {
     },
   };
 
+  // Plain English title for the WhatsApp message, so sellers recognise their horse either way
+  const whatsappTitle = `${horse.breed} ${horse.gender.toLowerCase()}`;
+
   return (
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-4 lg:pb-12">
+      {/* Counts one view per visit, for the admin dashboard */}
+      <TrackEvent type="view" onceKey={`view:${horse.id}`} listingId={horse.id} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
@@ -85,9 +122,9 @@ export default async function HorseDetailPage({ params }: Props) {
 
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
-        <Link href="/" className="hover:text-foreground">Home</Link>
+        <Link href="/" className="hover:text-foreground">{c("home")}</Link>
         {" / "}
-        <Link href="/horses" className="hover:text-foreground">Horses</Link>
+        <Link href="/horses" className="hover:text-foreground">{c("horses")}</Link>
         {" / "}
         <span className="text-foreground">{title}</span>
       </nav>
@@ -95,37 +132,40 @@ export default async function HorseDetailPage({ params }: Props) {
       <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Left column: media and details */}
         <div className="min-w-0">
-          <Media horse={horse} />
+          <Media horse={horse} photoLabel={(key) => o(`photo.${key}`)} t={t} />
 
           <header className="mt-6">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+              <SaveButton listingId={horse.id} slug={horse.slug} />
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {horse.town}, {horse.district} · Posted {postedLabel(horse.postedDaysAgo).toLowerCase()}
+              {horse.town}, {l.district} · {t("posted", { when: posted })}
             </p>
             <p className="mt-3 text-2xl font-semibold lg:hidden">
               {formatInr(horse.priceInr)}
               <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-                {horse.negotiable ? "Negotiable" : "Fixed price"}
+                {horse.negotiable ? c("negotiable") : c("fixedPrice")}
               </span>
             </p>
           </header>
 
-          <DetailList heading="Horse details" rows={facts} />
-          <DetailList heading="Health & training" rows={health} />
+          <DetailList heading={t("horseDetails")} rows={facts} />
+          <DetailList heading={t("healthTraining")} rows={health} />
 
           {horse.description && (
             <section className="mt-8">
-              <h2 className="text-lg font-semibold">From the seller</h2>
+              <h2 className="text-lg font-semibold">{t("fromSeller")}</h2>
               <p className="mt-2 max-w-prose whitespace-pre-line leading-relaxed">{horse.description}</p>
             </section>
           )}
 
           <section className="mt-8 rounded-xl border p-4 text-sm">
-            <h2 className="font-semibold">Before you travel</h2>
+            <h2 className="font-semibold">{t("beforeTravel")}</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>Ask the seller for a fresh video of the horse walking and trotting.</li>
-              <li>Check the teeth and legs in person, ideally with a vet.</li>
-              <li>Never pay an advance before seeing the horse.</li>
+              <li>{t("tip1")}</li>
+              <li>{t("tip2")}</li>
+              <li>{t("tip3")}</li>
             </ul>
           </section>
         </div>
@@ -136,30 +176,30 @@ export default async function HorseDetailPage({ params }: Props) {
             <div>
               <p className="text-3xl font-semibold">{formatInr(horse.priceInr)}</p>
               <p className="text-sm text-muted-foreground">
-                {horse.negotiable ? "Price negotiable" : "Fixed price"}
+                {horse.negotiable ? c("priceNegotiable") : c("fixedPrice")}
               </p>
             </div>
-            <ContactSeller listingId={horse.id} slug={horse.slug} title={title} />
-            <SellerInfo horse={horse} />
+            <ContactSeller listingId={horse.id} slug={horse.slug} title={whatsappTitle} />
+            <SellerInfo horse={horse} seller={seller} t={t} locale={locale} />
           </div>
         </aside>
       </div>
 
       {/* Seller info for phones */}
       <div className="mt-8 lg:hidden">
-        <SellerInfo horse={horse} />
+        <SellerInfo horse={horse} seller={seller} t={t} locale={locale} />
       </div>
 
       <p className="mt-6 text-sm">
         <Link href={`/report?listing=${horse.slug}`} className="text-muted-foreground underline hover:text-foreground">
-          Report this listing
+          {t("report")}
         </Link>
       </p>
 
       {/* Similar horses */}
       {similar.length > 0 && (
         <section className="mt-10 border-t pt-8">
-          <h2 className="text-lg font-semibold">Similar horses</h2>
+          <h2 className="text-lg font-semibold">{t("similar")}</h2>
           <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {similar.map((h) => (
               <li key={h.id}>
@@ -175,17 +215,20 @@ export default async function HorseDetailPage({ params }: Props) {
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{formatInr(horse.priceInr)}</p>
-            <p className="truncate text-xs text-muted-foreground">{horse.district}</p>
+            <p className="truncate text-xs text-muted-foreground">{l.district}</p>
           </div>
-          <ContactSeller listingId={horse.id} slug={horse.slug} title={title} compact />
+          <ContactSeller listingId={horse.id} slug={horse.slug} title={whatsappTitle} compact />
         </div>
       </div>
     </div>
   );
 }
 
+// A translator for the "detail" texts, passed to the small parts below
+type T = (key: string, values?: Record<string, string | number>) => string;
+
 /** Walking video on top, then the 5 photos. Tap a photo to open it full size. */
-function Media({ horse }: { horse: Listing }) {
+function Media({ horse, photoLabel, t }: { horse: Listing; photoLabel: (key: string) => string; t: T }) {
   return (
     <div>
       {horse.videoUrl ? (
@@ -200,25 +243,26 @@ function Media({ horse }: { horse: Listing }) {
         />
       ) : horse.coverUrl ? (
         <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
-          <Image src={horse.coverUrl} alt={horse.breed} fill priority sizes="(min-width: 1024px) 66vw, 100vw" className="object-contain" />
+          <Image src={horse.coverUrl} alt={horse.breed} fill loading="eager" fetchPriority="high" sizes="(min-width: 1024px) 66vw, 100vw" className="object-contain" />
         </div>
       ) : null}
 
-      <ul className="mt-3 grid grid-cols-5 gap-2" aria-label="Photos">
+      <ul className="mt-3 grid grid-cols-5 gap-2">
         {photoSlots.map((slot) => {
           const url = horse.photoUrls[slot.key];
+          const label = photoLabel(slot.key);
           return (
             <li key={slot.key} className="relative aspect-square overflow-hidden rounded-lg bg-muted">
               {url ? (
-                <a href={url} target="_blank" rel="noopener" aria-label={`Open ${slot.label} photo`}>
-                  <Image src={url} alt={`${slot.label} view`} fill sizes="(min-width: 1024px) 13vw, 20vw" className="object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-black/50 py-0.5 text-center text-[10px] text-white sm:text-xs">
-                    {slot.label}
+                <a href={url} target="_blank" rel="noopener" aria-label={t("openPhoto", { label })}>
+                  <Image src={url} alt={t("photoView", { label })} fill sizes="(min-width: 1024px) 13vw, 20vw" className="object-cover" />
+                  <span className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-0.5 py-0.5 text-center text-[10px] text-white sm:text-xs">
+                    {label}
                   </span>
                 </a>
               ) : (
                 <span className="flex size-full items-end justify-center p-1 text-center text-[10px] text-muted-foreground">
-                  {slot.label}
+                  {label}
                 </span>
               )}
             </li>
@@ -245,17 +289,42 @@ function DetailList({ heading, rows }: { heading: string; rows: [string, string]
   );
 }
 
-function SellerInfo({ horse }: { horse: Listing }) {
-  const listed = new Date(horse.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+function SellerInfo({ horse, seller, t, locale }: { horse: Listing; seller: SellerProfile; t: T; locale: string }) {
+  const fmt = (iso: string, withDay = true) =>
+    new Date(iso).toLocaleDateString(
+      dateLocale(locale),
+      withDay ? { day: "numeric", month: "short", year: "numeric" } : { month: "short", year: "numeric" },
+    );
+  // Show a notice for 30 days after the seller changed their name
+  const recentNameChange =
+    seller.nameChangedAt && Date.now() - new Date(seller.nameChangedAt).getTime() < 30 * 86_400_000;
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border p-4 lg:border-0 lg:p-0">
-      <div aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-lg">
-        ✓
+    <div className="rounded-xl border p-4 lg:border-0 lg:p-0">
+      <div className="flex items-center gap-3">
+        <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-muted">
+          {seller.avatarUrl ? (
+            <Image src={seller.avatarUrl} alt={seller.name ?? t("verifiedSeller")} fill sizes="48px" className="object-cover" />
+          ) : (
+            <span aria-hidden className="flex size-full items-center justify-center font-semibold text-muted-foreground">
+              {seller.name ? seller.name.charAt(0).toUpperCase() : "S"}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 text-sm">
+          <p className="truncate font-medium">{seller.name ?? t("verifiedSeller")}</p>
+          <p className="text-muted-foreground">
+            {t("mobileVerified")}
+            {seller.memberSince ? ` · ${t("memberSince", { date: fmt(seller.memberSince, false) })}` : ""}
+          </p>
+        </div>
       </div>
-      <div className="text-sm">
-        <p className="font-medium">Verified seller</p>
-        <p className="text-muted-foreground">Mobile number verified · Listed {listed}</p>
-      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{t("listed", { date: fmt(horse.createdAt) })}</p>
+      {recentNameChange && seller.nameChangedAt && (
+        <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+          {t("nameChanged", { date: fmt(seller.nameChangedAt) })}
+        </p>
+      )}
     </div>
   );
 }

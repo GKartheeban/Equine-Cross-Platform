@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 type State = { status: "loading" } | { status: "out" } | { status: "in"; phone: string };
@@ -11,6 +12,7 @@ type State = { status: "loading" } | { status: "out" } | { status: "in"; phone: 
 // Runs in the browser and reads the saved login, so pages stay fast and cacheable.
 export function AccountMenu() {
   const router = useRouter();
+  const t = useTranslations("header");
   const [state, setState] = useState<State>({ status: "loading" });
   const menuRef = useRef<HTMLDetailsElement>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -55,11 +57,11 @@ export function AccountMenu() {
 
   // Keeps the same width while checking, so the header doesn't jump
   if (state.status === "loading") {
-    return <span className={`${linkClass} invisible`} aria-hidden>Login</span>;
+    return <span className={`${linkClass} invisible`} aria-hidden>{t("login")}</span>;
   }
 
   if (state.status === "out") {
-    return <Link href="/login" className={linkClass}>Login</Link>;
+    return <Link href="/login" className={linkClass}>{t("login")}</Link>;
   }
 
   const close = () => {
@@ -69,24 +71,24 @@ export function AccountMenu() {
   return (
     <details ref={menuRef} className="relative">
       <summary className={`${linkClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
-        Account <span aria-hidden className="text-xs">▾</span>
+        {t("account")} <span aria-hidden className="text-xs">▾</span>
       </summary>
       <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border bg-background py-1 text-sm shadow-lg">
         <p className="border-b px-4 py-2 text-xs text-muted-foreground">
-          Logged in as <span className="font-medium text-foreground">{state.phone}</span>
+          {t.rich("loggedInAs", { phone: state.phone, b: (c) => <span className="font-medium text-foreground">{c}</span> })}
         </p>
         <Link href="/account/profile" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
-          My profile
+          {t("myProfile")}
         </Link>
         <Link href="/sell/listings" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
-          My listings
+          {t("myListings")}
         </Link>
         <Link href="/saved" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
-          Saved horses
+          {t("savedHorses")}
         </Link>
         {isAdmin && (
           <Link href="/admin" onClick={close} className="block border-t px-4 py-2.5 font-medium hover:bg-muted">
-            Admin
+            {t("admin")}
           </Link>
         )}
         <button
@@ -94,7 +96,7 @@ export function AccountMenu() {
           onClick={logout}
           className="block w-full border-t px-4 py-2.5 text-left text-destructive hover:bg-muted"
         >
-          Logout
+          {t("logout")}
         </button>
       </div>
     </details>
