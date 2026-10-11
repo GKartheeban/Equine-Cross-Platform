@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
-import type { PhotoKey } from "@/lib/horse-options";
+import type { MediaKind } from "@/lib/horse-options";
+import { storedMedia, type StoredMedia } from "@/lib/media";
 import { AppError, type ProgressFn } from "@/lib/app-error";
+
+/** One photo or video in the form. New ones have a file; saved ones only a path. */
+export type DraftMedia = { type: MediaKind; file: File | null; path?: string; seconds?: number };
 
 export type ListingDraft = {
   breed: string;
@@ -9,11 +13,11 @@ export type ListingDraft = {
   heightInches: number;
   colour: string;
   markings: string;
-  photos: Partial<Record<PhotoKey, File>>;
-  video: { file: File; seconds: number } | null;
+  /** Photos and videos in the seller's order (first photo = cover) */
+  media: DraftMedia[];
   vaccinated: boolean;
   vetCertificate: File | null;
-  trainingLevel: string;
+  trainingLevels: string[];
   handlerExperience: string;
   pregnant: boolean | null;
   priceInr: number;
@@ -23,8 +27,58 @@ export type ListingDraft = {
   description: string;
 };
 
+type Uploader = (bucket: string, path: string, body: Blob, contentType: string) => Promise<string>;
+
 /**
- * Uploads the photos, video and vet certificate, then saves the listing
+ * Uploads the new photos/videos (photos are shrunk on the phone first) and returns
+ * the full media list to save, in order. Saved files keep their path.
+ */
+async function uploadMedia(
+  media: DraftMedia[],
+  folder: string,
+  stamp: number,
+  upload: Uploader,
+  onProgress: ProgressFn,
+): Promise<StoredMedia[]> {
+  const toUpload = media.filter((m) => m.file).length;
+  let n = 0;
+  const result: StoredMedia[] = [];
+  for (let i = 0; i < media.length; i++) {
+    const m = media[i];
+    if (!m.file) {
+      if (m.path) result.push({ type: m.type, path: m.path, ...(m.type === "video" ? { seconds: m.seconds ?? 20 } : {}) });
+      continue;
+    }
+    n++;
+    if (m.type === "photo") {
+      onProgress("media", { n, total: toUpload });
+      const small = await shrinkImage(m.file);
+      const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(m.file);
+      const path = await upload("listing-media", `${folder}/photo-${stamp}-${i + 1}.${ext}`, small, small.type || m.file.type);
+      result.push({ type: "photo", path });
+    } else {
+      onProgress("mediaVideo", { n, total: toUpload, mb: (m.file.size / 1024 / 1024).toFixed(0) });
+      const path = await upload(
+        "listing-media",
+        `${folder}/video-${stamp}-${i + 1}.${extensionOf(m.file)}`,
+        m.file,
+        m.file.type || "video/mp4",
+      );
+      result.push({ type: "video", path, seconds: Math.round(m.seconds ?? 20) });
+    }
+  }
+  return result;
+}
+
+/** Database "MEDIA_RULES" errors -> plain message */
+function saveError(message: string) {
+  if (/DAILY_LIMIT/.test(message)) return new AppError("dailyLimit");
+  if (/MEDIA_RULES/.test(message)) return new AppError("mediaRules");
+  return new AppError("saveFailed", { detail: message });
+}
+
+/**
+ * Uploads the photos, videos and vet certificate, then saves the listing
  * as "live" straight away. Reports progress in plain words.
  * Returns the new listing's slug.
  */
@@ -52,31 +106,10 @@ export async function submitListing(
   }
 
   try {
-    // 1. Photos: shrunk on the phone first so uploads are quick on mobile data
-    const photoPaths: Partial<Record<PhotoKey, string>> = {};
-    const entries = Object.entries(draft.photos) as [PhotoKey, File][];
-    for (let i = 0; i < entries.length; i++) {
-      const [key, file] = entries[i];
-      onProgress("photos", { n: i + 1, total: entries.length });
-      const small = await shrinkImage(file);
-      const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(file);
-      photoPaths[key] = await upload("listing-media", `${folder}/${key}.${ext}`, small, small.type || file.type);
-    }
+    // 1. Photos and videos, in order
+    const media = await uploadMedia(draft.media, folder, Date.now(), upload, onProgress);
 
-    // 2. Walking video
-    let videoPath: string | null = null;
-    if (draft.video) {
-      const mb = (draft.video.file.size / 1024 / 1024).toFixed(0);
-      onProgress("video", { mb });
-      videoPath = await upload(
-        "listing-media",
-        `${folder}/walking.${extensionOf(draft.video.file)}`,
-        draft.video.file,
-        draft.video.file.type,
-      );
-    }
-
-    // 3. Vet certificate (private bucket)
+    // 2. Vet certificate (private bucket)
     let vetPath: string | null = null;
     if (draft.vetCertificate) {
       onProgress("certificate");
@@ -88,7 +121,7 @@ export async function submitListing(
       );
     }
 
-    // 4. Save the listing
+    // 3. Save the listing
     onProgress("saving");
     const slug = makeSlug(draft, listingId);
     const { error } = await supabase.from("listings").insert({
@@ -104,7 +137,7 @@ export async function submitListing(
       markings: draft.markings.trim() || null,
       vaccinated: draft.vaccinated,
       vet_certificate_path: vetPath,
-      training_level: draft.trainingLevel,
+      training_levels: draft.trainingLevels,
       handler_experience: draft.handlerExperience,
       pregnant: draft.pregnant,
       price_inr: draft.priceInr,
@@ -112,14 +145,9 @@ export async function submitListing(
       district: draft.district,
       town: draft.town.trim(),
       description: draft.description.trim() || null,
-      photo_paths: photoPaths,
-      video_path: videoPath,
-      video_seconds: draft.video?.seconds ?? null,
+      media,
     });
-    if (error) {
-      const daily = error.message.match(/DAILY_LIMIT: (.*)/);
-      throw daily ? new AppError("dailyLimit") : new AppError("saveFailed", { detail: error.message });
-    }
+    if (error) throw saveError(error.message);
 
     return slug;
   } catch (err) {
@@ -191,17 +219,13 @@ function uploadError(message: string) {
 
 /* ---------- Editing an existing listing ---------- */
 
-type EditMedia = { file: File | null; path?: string };
-
-export type ListingEdit = Omit<ListingDraft, "photos" | "video" | "vetCertificate"> & {
-  photos: Partial<Record<PhotoKey, EditMedia>>;
-  video: (EditMedia & { seconds: number }) | null;
-  vetCertificate: EditMedia | null;
+export type ListingEdit = Omit<ListingDraft, "vetCertificate"> & {
+  vetCertificate: { file: File | null; path?: string } | null;
 };
 
 /**
- * Saves changes to a listing. Only photos/video/certificate the seller replaced
- * are uploaded; the old files are deleted afterwards. Returns the listing's slug.
+ * Saves changes to a listing. Only new photos/videos/certificate are uploaded;
+ * files the seller removed or replaced are deleted afterwards. Returns the slug.
  */
 export async function updateListing(
   listingId: string,
@@ -216,7 +240,7 @@ export async function updateListing(
   const folder = `${userId}/${listingId}`;
   const stamp = Date.now(); // new file names, so phones don't show old cached photos
   const uploaded: { bucket: string; path: string }[] = [];
-  const replaced: { bucket: string; path: string }[] = [];
+  let removedFiles: { bucket: string; path: string }[] = [];
 
   async function upload(bucket: string, path: string, body: Blob, contentType: string) {
     const { error } = await supabase.storage
@@ -227,45 +251,22 @@ export async function updateListing(
     return path;
   }
 
-  // Current saved file paths, to know what gets replaced
+  // What is saved now, to know which files are no longer used
   const { data: current, error: loadError } = await supabase
     .from("listings")
-    .select("slug, photo_paths, video_path, vet_certificate_path")
+    .select("slug, media, photo_paths, video_path, video_seconds, vet_certificate_path")
     .eq("id", listingId)
     .single();
   if (loadError || !current) throw new AppError("listingMissing");
-  const oldPhotos = (current.photo_paths ?? {}) as Record<string, string>;
+  const before = storedMedia(current);
 
   try {
-    // 1. Photos: upload only the replaced ones
-    const photoPaths: Record<string, string> = { ...oldPhotos };
-    const changed = (Object.entries(draft.photos) as [PhotoKey, EditMedia][]).filter(([, m]) => m.file);
-    for (let i = 0; i < changed.length; i++) {
-      const [key, m] = changed[i];
-      onProgress("newPhotos", { n: i + 1, total: changed.length });
-      const small = await shrinkImage(m.file!);
-      const ext = small.type === "image/jpeg" ? "jpg" : extensionOf(m.file!);
-      photoPaths[key] = await upload("listing-media", `${folder}/${key}-${stamp}.${ext}`, small, small.type || m.file!.type);
-      if (oldPhotos[key]) replaced.push({ bucket: "listing-media", path: oldPhotos[key] });
-    }
+    // 1. Photos and videos: upload only the new ones
+    const media = await uploadMedia(draft.media, folder, stamp, upload, onProgress);
 
-    // 2. Video
-    let videoPath: string | null = current.video_path;
-    let videoSeconds: number | null | undefined = undefined;
-    if (draft.video?.file) {
-      onProgress("newVideo");
-      videoPath = await upload(
-        "listing-media",
-        `${folder}/walking-${stamp}.${extensionOf(draft.video.file)}`,
-        draft.video.file,
-        draft.video.file.type,
-      );
-      videoSeconds = draft.video.seconds;
-      if (current.video_path) replaced.push({ bucket: "listing-media", path: current.video_path });
-    }
-
-    // 3. Vet certificate
+    // 2. Vet certificate
     let vetPath: string | null = current.vet_certificate_path;
+    const oldVet: string | null = current.vet_certificate_path;
     if (draft.vetCertificate?.file) {
       onProgress("certificate");
       vetPath = await upload(
@@ -274,10 +275,9 @@ export async function updateListing(
         draft.vetCertificate.file,
         draft.vetCertificate.file.type,
       );
-      if (current.vet_certificate_path) replaced.push({ bucket: "documents", path: current.vet_certificate_path });
     }
 
-    // 4. Save the changes
+    // 3. Save the changes
     onProgress("savingChanges");
     const { error } = await supabase
       .from("listings")
@@ -290,7 +290,7 @@ export async function updateListing(
         markings: draft.markings.trim() || null,
         vaccinated: draft.vaccinated,
         vet_certificate_path: vetPath,
-        training_level: draft.trainingLevel,
+        training_levels: draft.trainingLevels,
         handler_experience: draft.handlerExperience,
         pregnant: draft.pregnant,
         price_inr: draft.priceInr,
@@ -298,12 +298,18 @@ export async function updateListing(
         district: draft.district,
         town: draft.town.trim(),
         description: draft.description.trim() || null,
-        photo_paths: photoPaths,
-        video_path: videoPath,
-        ...(videoSeconds !== undefined ? { video_seconds: videoSeconds } : {}),
+        media,
+        // The old fixed-photo columns aren't used any more
+        photo_paths: {},
+        video_path: null,
+        video_seconds: null,
       })
       .eq("id", listingId);
-    if (error) throw new AppError("saveFailed", { detail: error.message });
+    if (error) throw saveError(error.message);
+
+    const kept = new Set(media.map((m) => m.path));
+    removedFiles = before.filter((m) => !kept.has(m.path)).map((m) => ({ bucket: "listing-media", path: m.path }));
+    if (draft.vetCertificate?.file && oldVet) removedFiles.push({ bucket: "documents", path: oldVet });
   } catch (err) {
     for (const f of uploaded) {
       await supabase.storage.from(f.bucket).remove([f.path]).catch(() => {});
@@ -311,9 +317,9 @@ export async function updateListing(
     throw err;
   }
 
-  // 5. Delete the files that were replaced (not needed any more)
+  // 4. Delete the files that were removed or replaced (not needed any more)
   for (const bucket of ["listing-media", "documents"]) {
-    const paths = replaced.filter((f) => f.bucket === bucket).map((f) => f.path);
+    const paths = removedFiles.filter((f) => f.bucket === bucket).map((f) => f.path);
     if (paths.length) await supabase.storage.from(bucket).remove(paths).catch(() => {});
   }
 

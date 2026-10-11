@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { formatInr } from "@/lib/sample-data";
 import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
+import { coverOf, storedMedia } from "@/lib/media";
 
 type Status = "pending" | "live" | "sold" | "expired" | "rejected" | "removed";
 
@@ -20,6 +21,7 @@ type MyListing = {
   district: string;
   town: string;
   created_at: string;
+  media: unknown;
   photo_paths: Record<string, string> | null;
   video_path: string | null;
   vet_certificate_path: string | null;
@@ -34,9 +36,6 @@ const statusStyle: Record<Status, string> = {
   rejected: "bg-red-100 text-red-800",
   removed: "bg-red-100 text-red-800",
 };
-
-const mediaUrl = (path: string) =>
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-media/${path}`;
 
 export function MyListings() {
   const router = useRouter();
@@ -59,7 +58,7 @@ export function MyListings() {
     }
     const { data, error } = await supabase
       .from("listings")
-      .select("id, slug, status, breed, gender, price_inr, district, town, created_at, photo_paths, video_path, vet_certificate_path")
+      .select("id, slug, status, breed, gender, price_inr, district, town, created_at, media, photo_paths, video_path, vet_certificate_path")
       .eq("seller_id", session.user.id)
       .order("created_at", { ascending: false });
     if (error) setError(t("errLoad"));
@@ -89,7 +88,7 @@ export function MyListings() {
       return setError(t("errDelete"));
     }
     // Also delete its photos, video and certificate from storage
-    const media = [...Object.values(listing.photo_paths ?? {}), ...(listing.video_path ? [listing.video_path] : [])];
+    const media = storedMedia(listing).map((m) => m.path);
     if (media.length) await supabase.storage.from("listing-media").remove(media);
     if (listing.vet_certificate_path) await supabase.storage.from("documents").remove([listing.vet_certificate_path]);
     setBusyId(null);
@@ -117,7 +116,7 @@ export function MyListings() {
       ) : (
         <ul className="grid gap-3">
           {listings.map((l) => {
-            const cover = l.photo_paths?.front ?? Object.values(l.photo_paths ?? {})[0];
+            const cover = coverOf(storedMedia(l));
             const statusKey = statusStyle[l.status] ? l.status : "pending";
             const breed = breedSlug(l.breed) ? o(`breed.${breedSlug(l.breed)}`) : l.breed;
             const district = districtSlug(l.district) ? o(`district.${districtSlug(l.district)}`) : l.district;
@@ -127,9 +126,12 @@ export function MyListings() {
               <li key={l.id} className="rounded-xl border p-3">
                 <div className="flex gap-3">
                   <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-muted sm:size-24">
-                    {cover && (
+                    {cover?.type === "photo" && (
                       // eslint-disable-next-line @next/next/no-img-element -- small thumbnail, already resized on upload
-                      <img src={mediaUrl(cover)} alt="" loading="lazy" className="size-full object-cover" />
+                      <img src={cover.url} alt="" loading="lazy" className="size-full object-cover" />
+                    )}
+                    {cover?.type === "video" && (
+                      <video src={`${cover.url}#t=0.5`} muted playsInline preload="metadata" className="size-full object-cover" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">

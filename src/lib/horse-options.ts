@@ -2,29 +2,31 @@
 
 export const genders = ["Mare", "Stallion", "Gelding", "Colt", "Filly"] as const;
 
-export const trainingLevels = [
-  "Untrained",
-  "Ridden",
-  "Cart",
-  "Ridden and cart",
-  "Race",
-  "Dance only",
-  "All",
-] as const;
+// Training: sellers tick all that apply. "Untrained" can't be combined with the others.
+export const trainingLevels = ["Untrained", "Ridden", "Cart", "Race", "Dance"] as const;
+
+/** Old single values (before update 017) -> the new tick boxes */
+export function trainingFromOld(value: string | null | undefined): string[] {
+  if (!value) return [];
+  if (value === "Ridden and cart") return ["Ridden", "Cart"];
+  if (value === "Dance only") return ["Dance"];
+  if (value === "All") return ["Ridden", "Cart", "Race", "Dance"];
+  return [value];
+}
 
 // How experienced the person handling this horse needs to be
 export const handlerExperience = ["Beginner", "Intermediate", "Expert"] as const;
 
-// Photo angles every seller is asked for. The first one is the cover photo.
-export const photoSlots = [
-  { key: "front", label: "Front", hint: "Head-on, full body" },
-  { key: "left", label: "Left side", hint: "Whole horse, standing straight" },
-  { key: "right", label: "Right side", hint: "Whole horse, standing straight" },
-  { key: "rear", label: "Rear", hint: "From behind, legs visible" },
-  { key: "teeth", label: "Teeth", hint: "Close-up of the teeth (shows age)" },
-] as const;
+// What a seller can upload: any mix of photos and videos.
+// Same rules are checked in the database (supabase/016_flexible_media.sql).
+export const mediaRules = {
+  maxFiles: 10,
+  maxPhotos: 8,
+  maxVideos: 2,
+  minPhotosWithoutVideo: 2, // photos only -> at least 2; with a video, any number is fine
+};
 
-export type PhotoKey = (typeof photoSlots)[number]["key"];
+export type MediaKind = "photo" | "video";
 
 export const limits = {
   photoMb: 10,

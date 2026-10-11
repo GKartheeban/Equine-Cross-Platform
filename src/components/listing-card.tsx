@@ -30,6 +30,16 @@ export function ListingCard({ horse, priority = false }: { horse: Listing; prior
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
           />
+        ) : horse.coverVideoUrl ? (
+          // Video-only listing: show the video itself, silent and paused on its first frame
+          <video
+            src={`${horse.coverVideoUrl}#t=0.5`}
+            muted
+            playsInline
+            preload="metadata"
+            className="size-full object-cover"
+            aria-label={`${breed} ${gender} – ${district}`}
+          />
         ) : (
           <span className="flex size-full items-center justify-center text-sm text-muted-foreground">{t("noPhoto")}</span>
         )}

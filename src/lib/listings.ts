@@ -3,8 +3,8 @@
 // security rules hide everything else from the public.
 
 import { createClient } from "@supabase/supabase-js";
-import type { PhotoKey } from "@/lib/horse-options";
-import { photoSlots } from "@/lib/horse-options";
+import { coverOf, mediaUrl, storedMedia, type MediaItem } from "@/lib/media";
+import { trainingFromOld } from "@/lib/horse-options";
 import { breeds, districts } from "@/lib/sample-data";
 
 export type Listing = {
@@ -23,13 +23,17 @@ export type Listing = {
   town: string;
   createdAt: string;
   postedDaysAgo: number;
-  photoUrls: Partial<Record<PhotoKey, string>>;
+  /** All photos and videos, in the seller's order (first photo = cover) */
+  media: MediaItem[];
+  /** Cover photo for cards and sharing (null for video-only listings) */
   coverUrl: string | null;
-  videoUrl: string | null;
+  /** For video-only listings: the first video, shown on the card instead of a photo */
+  coverVideoUrl: string | null;
   hasVideo: boolean;
   vaccinated: boolean;
   vetCertificate: boolean;
-  trainingLevel: string;
+  /** e.g. ["Ridden", "Cart"] */
+  trainingLevels: string[];
   handlerExperience: string;
   pregnant: boolean | null;
   description: string | null;
@@ -51,11 +55,14 @@ export type Row = {
   district: string;
   town: string;
   created_at: string;
+  media: unknown;
   photo_paths: Record<string, string> | null;
   video_path: string | null;
+  video_seconds: number | null;
   vaccinated: boolean;
   vet_certificate_path: string | null;
-  training_level: string;
+  training_level: string | null;
+  training_levels: string[] | null;
   handler_experience: string;
   pregnant: boolean | null;
   description: string | null;
@@ -64,10 +71,8 @@ export type Row = {
 
 export const LISTING_COLUMNS =
   // (kept in one place for the server pages and the Saved page)
-  "id, seller_id, slug, breed, gender, age_years, height_inches, colour, markings, price_inr, negotiable, district, town, created_at, photo_paths, video_path, vaccinated, vet_certificate_path, training_level, handler_experience, pregnant, description, views";
+  "id, seller_id, slug, breed, gender, age_years, height_inches, colour, markings, price_inr, negotiable, district, town, created_at, media, photo_paths, video_path, video_seconds, vaccinated, vet_certificate_path, training_level, training_levels, handler_experience, pregnant, description, views";
 const COLUMNS = LISTING_COLUMNS;
-
-const MEDIA_BUCKET = "listing-media";
 
 // A simple public client: no login needed to read live listings
 function db() {
@@ -78,16 +83,9 @@ function db() {
   );
 }
 
-function publicUrl(path: string) {
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path}`;
-}
-
 export function toListing(r: Row): Listing {
-  const photoUrls: Partial<Record<PhotoKey, string>> = {};
-  for (const slot of photoSlots) {
-    const p = r.photo_paths?.[slot.key];
-    if (p) photoUrls[slot.key] = publicUrl(p);
-  }
+  const saved = storedMedia(r);
+  const cover = coverOf(saved);
   const days = Math.max(0, Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86_400_000));
   return {
     id: r.id,
@@ -105,13 +103,13 @@ export function toListing(r: Row): Listing {
     town: r.town,
     createdAt: r.created_at,
     postedDaysAgo: days,
-    photoUrls,
-    coverUrl: photoUrls.front ?? Object.values(photoUrls)[0] ?? null,
-    videoUrl: r.video_path ? publicUrl(r.video_path) : null,
-    hasVideo: !!r.video_path,
+    media: saved.map((m) => ({ type: m.type, url: mediaUrl(m.path), seconds: m.seconds })),
+    coverUrl: cover?.type === "photo" ? cover.url : null,
+    coverVideoUrl: cover?.type === "video" ? cover.url : null,
+    hasVideo: saved.some((m) => m.type === "video"),
     vaccinated: r.vaccinated,
     vetCertificate: !!r.vet_certificate_path,
-    trainingLevel: r.training_level,
+    trainingLevels: r.training_levels?.length ? r.training_levels : trainingFromOld(r.training_level),
     handlerExperience: r.handler_experience,
     pregnant: r.pregnant,
     description: r.description,

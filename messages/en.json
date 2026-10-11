@@ -1,7 +1,7 @@
 {
   "meta": {
     "siteTitle": "EquineTrade – Horses for sale in Tamil Nadu",
-    "siteDescription": "Buy and sell horses across Tamil Nadu. Every listing with photos, a walking video, price and location. Call or WhatsApp sellers before you travel."
+    "siteDescription": "Buy and sell horses across Tamil Nadu. Every listing with photos or videos, price and location. Call or WhatsApp sellers before you travel."
   },
   "common": {
     "today": "Today",
@@ -46,7 +46,7 @@
   },
   "home": {
     "title": "Find the right horse in Tamil Nadu",
-    "subtitle": "Every listing shows photos, a walking video, price and location, so you know the horse before you travel.",
+    "subtitle": "Every listing shows photos or videos, price and location, so you know the horse before you travel.",
     "anyBreed": "Any breed",
     "anyDistrict": "Any district",
     "anyPrice": "Any price",
@@ -60,7 +60,7 @@
     "noHorsesTitle": "No horses listed yet",
     "noHorsesText": "Be the first to post a horse for sale.",
     "whyBuyHere": "Why buy here",
-    "why1Title": "Walking video on listings",
+    "why1Title": "Photos and videos on listings",
     "why1Text": "See how the horse moves, not just how it looks in one photo.",
     "why2Title": "Talk before you travel",
     "why2Text": "Call or WhatsApp the seller to ask questions and get more videos first.",
@@ -94,7 +94,7 @@
     "noMatchTitle": "No horses match these filters",
     "noMatchText": "Try a nearby district, a wider price range, or clear the filters.",
     "clearAll": "Clear all filters",
-    "metaDescription": "Browse {heading} with photos, walking videos, prices and direct contact with sellers."
+    "metaDescription": "Browse {heading} with photos, videos, prices and direct contact with sellers."
   },
   "detail": {
     "posted": "Posted {when}",
@@ -125,10 +125,13 @@
     "memberSince": "Member since {date}",
     "listed": "Listed {date}",
     "nameChanged": "This seller changed their name on {date}.",
-    "openPhoto": "Open {label} photo",
-    "photoView": "{label} view",
     "notFound": "Horse not found",
-    "metaTitle": "{breed} {gender} for sale in {district} – {price}"
+    "metaTitle": "{breed} {gender} for sale in {district} – {price}",
+    "photo": "Photo",
+    "video": "Video",
+    "noMedia": "No photos or videos",
+    "previous": "Previous",
+    "next": "Next"
   },
   "browse": {
     "forSale": "{count, plural, =0 {No horses for sale} =1 {1 horse for sale} other {# horses for sale}}",
@@ -139,10 +142,10 @@
     "otherDistricts": "Other districts",
     "breedHeading": "{breed} horses for sale in Tamil Nadu",
     "districtHeading": "Horses for sale in {district}",
-    "districtIntro": "Horses listed by sellers in and around {district}. See each horse's photos and walking video, then call or WhatsApp the seller before you travel.",
+    "districtIntro": "Horses listed by sellers in and around {district}. See each horse's photos and videos, then call or WhatsApp the seller before you travel.",
     "breedFallbackIntro": "Browse {breed} horses for sale across Tamil Nadu.",
-    "breedMeta": "{heading}. Photos, walking videos, prices and direct contact with sellers.",
-    "districtMeta": "{heading}, Tamil Nadu. Marwari, Kathiawari, country horses and more, with photos, walking videos and prices. Call or WhatsApp sellers directly."
+    "breedMeta": "{heading}. Photos, videos, prices and direct contact with sellers.",
+    "districtMeta": "{heading}, Tamil Nadu. Marwari, Kathiawari, country horses and more, with photos, videos and prices. Call or WhatsApp sellers directly."
   },
   "breedIntro": {
     "marwari": "Marwari horses come from Rajasthan and are known for their inward-curving ears, hardiness and graceful gait.",
@@ -192,7 +195,8 @@
       "ridden_and_cart": "Ridden and cart",
       "race": "Race",
       "dance_only": "Dance only",
-      "all": "All"
+      "all": "All",
+      "dance": "Dance"
     },
     "handler": {
       "beginner": "Beginner",
@@ -296,14 +300,13 @@
   },
   "sell": {
     "newTitle": "Post your horse",
-    "newIntro": "Clear photos and a walking video help your horse sell faster.",
+    "newIntro": "Clear photos and a short walking video help your horse sell faster.",
     "steps": {
       "details": "Horse details",
-      "photos": "Photos",
-      "video": "Walking video",
       "health": "Health & training",
       "price": "Price & location",
-      "preview": "Preview"
+      "preview": "Preview",
+      "media": "Photos & video"
     },
     "stepOf": "Step {n} of {total}",
     "checkingLogin": "Checking your login…",
@@ -314,16 +317,6 @@
     "tryAgain": "Try again",
     "saveChanges": "Save changes",
     "submit": "Submit listing",
-    "cover": "cover",
-    "tapToChange": "tap to change",
-    "photosIntro": "Take each photo in daylight with the whole horse in frame. Tap a box to use the camera or gallery.",
-    "photoHint": {
-      "front": "Head-on, full body",
-      "left": "Whole horse, standing straight",
-      "right": "Whole horse, standing straight",
-      "rear": "From behind, legs visible",
-      "teeth": "Close-up of the teeth (shows age)"
-    },
     "done": {
       "savedTitle": "Changes saved",
       "liveTitle": "Your horse is now live",
@@ -335,13 +328,11 @@
     },
     "progress": {
       "start": "Starting upload…",
-      "photos": "Uploading photos ({n} of {total})…",
-      "video": "Uploading video ({mb} MB). Keep this page open…",
       "certificate": "Uploading vet certificate…",
       "saving": "Saving your listing…",
-      "newPhotos": "Uploading new photos ({n} of {total})…",
-      "newVideo": "Uploading new video. Keep this page open…",
-      "savingChanges": "Saving changes…"
+      "savingChanges": "Saving changes…",
+      "media": "Uploading file {n} of {total}…",
+      "mediaVideo": "Uploading file {n} of {total} (video, {mb} MB). Keep this page open…"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -364,17 +355,19 @@
       "colour": "Enter the colour.",
       "photoNotImage": "Choose a photo file.",
       "photoTooBig": "Photo must be under {mb} MB.",
-      "allPhotos": "Add all 5 photos to continue.",
-      "video": "Add a walking video. Buyers trust listings with video much more.",
       "videoNotVideo": "Choose a video file.",
       "videoTooLong": "This video is {seconds} seconds. Please record a new video of {max} seconds or less.",
       "videoTooBig": "This video file is too large. Please record a shorter or lower-quality video.",
       "yesNo": "Choose yes or no.",
-      "training": "Choose the training level.",
+      "training": "Tick at least one training option.",
       "handler": "Choose the handler's experience.",
       "price": "Enter the price in rupees.",
       "district": "Choose the district.",
-      "town": "Enter the town or village."
+      "town": "Enter the town or village.",
+      "mediaMin": "Add at least 2 photos, or 1 video.",
+      "mediaBusy": "Wait for the video to finish preparing.",
+      "notMedia": "\"{name}\" is not a photo or video.",
+      "mediaRules": "Photos and videos don't meet the rules: up to 8 photos and 2 videos (20 seconds each), with at least 2 photos or 1 video."
     },
     "fields": {
       "breed": "Breed",
@@ -393,8 +386,7 @@
       "vetHint": "A photo or PDF of the certificate. Builds buyer trust.",
       "vetOnFile": "Certificate on file (tap to replace)",
       "vetUpload": "Upload certificate",
-      "training": "Training level",
-      "chooseTraining": "Choose training level",
+      "training": "Training (tick all that apply)",
       "handler": "Handler's Experience",
       "chooseHandler": "Choose experience level",
       "pregnant": "Is the mare pregnant?",
@@ -405,33 +397,49 @@
       "chooseDistrict": "Choose district",
       "town": "Town or village",
       "about": "About the horse (optional)",
-      "aboutHint": "{count}/{max} · Tamil or English. Health, habits, why you're selling."
+      "aboutHint": "{count}/{max} · Tamil or English. Health, habits, why you're selling.",
+      "trainingHint": "\"Untrained\" can't be ticked together with the others."
     },
     "video": {
-      "howTitle": "How to record",
-      "how1": "Have someone walk the horse towards you, then away, then past you.",
-      "how2": "Record in daylight, holding the phone sideways.",
-      "how3": "{max} seconds is enough. Longer videos are shortened here; you choose which part to keep.",
       "tooLong": "Your video is <b>{seconds} seconds</b>. Choose the best {max} seconds to keep.",
       "keepRange": "Keep from {from} to {to}",
       "useSeconds": "Use these {max} seconds",
       "preparing": "Preparing your video… {percent}%",
       "preparingHint": "Keep this screen open. It takes about {max} seconds.",
-      "seconds": "{seconds} seconds",
-      "current": "Current video",
-      "chooseDifferent": "Choose a different video",
-      "choose": "Record or choose walking video",
       "checking": "Checking video…"
     },
     "preview": {
       "intro": "This is how buyers will see your listing. Tap Edit to change anything.",
-      "editMedia": "Edit photos or video",
+      "editMedia": "Edit photos or videos",
       "edit": "Edit",
       "uploaded": "Uploaded",
       "location": "Location",
       "about": "About the horse",
       "aboutEmpty": "Not added. Optional, but a few lines help buyers.",
-      "rules": "Your listing goes live as soon as you submit. Buyers can report listings, and listings of sick, injured or underage horses, or with fake details, are removed."
+      "rules": "Your listing goes live as soon as you submit. Buyers can report listings, and listings of sick, injured or underage horses, or with fake details, are removed.",
+      "noPhoto": "No photos or videos yet",
+      "video": "Video",
+      "photo": "Photo",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "media": {
+      "title": "Add photos and videos of your horse",
+      "intro": "Up to {photos} photos and {videos} videos (each up to {seconds} seconds). Add at least 2 photos, or 1 video. You can select them all together from your gallery.",
+      "pickAll": "Select photos & videos",
+      "addMore": "Add more",
+      "status": "{photos} of {maxPhotos} photos · {videos} of {maxVideos} videos",
+      "full": "Limit reached. Remove one to add another.",
+      "limitPhotos": "Only {max} photos are allowed. {count, plural, one {1 photo was} other {# photos were}} not added.",
+      "limitVideos": "Only {max} videos are allowed. {count, plural, one {1 video was} other {# videos were}} not added.",
+      "skipVideo": "Skip this video",
+      "waiting": "{count, plural, one {1 more video} other {# more videos}} waiting…",
+      "cover": "Cover",
+      "remove": "Remove",
+      "tipsTitle": "Tips",
+      "tip1": "The first photo is the cover shown on your listing.",
+      "tip2": "Use daylight and keep the whole horse in the frame.",
+      "tip3": "A short walking video (up to {max} seconds) helps buyers trust your listing."
     }
   },
   "editListing": {

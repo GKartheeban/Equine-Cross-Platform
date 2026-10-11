@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatInr } from "@/lib/sample-data";
+import { coverOf, storedMedia } from "@/lib/media";
 import { Dashboard } from "./dashboard";
 import { SellerBox, type SellerInfo } from "./seller-box";
 import { Team } from "./team";
@@ -19,7 +20,9 @@ type ListingInfo = {
   price_inr: number;
   status: string;
   created_at: string;
+  media: unknown;
   photo_paths: Record<string, string> | null;
+  video_path: string | null;
   seller_id: string;
 };
 
@@ -34,12 +37,10 @@ type Report = {
 
 type ReportGroup = { listing: ListingInfo; reports: Report[] };
 
-const LISTING_COLUMNS = "id, slug, breed, gender, district, town, price_inr, status, created_at, photo_paths, seller_id";
+const LISTING_COLUMNS = "id, slug, breed, gender, district, town, price_inr, status, created_at, media, photo_paths, video_path, seller_id";
 
-const thumbUrl = (l: ListingInfo) => {
-  const p = l.photo_paths?.front ?? Object.values(l.photo_paths ?? {})[0];
-  return p ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-media/${p}` : null;
-};
+// First photo, or the first video for video-only listings
+const thumbOf = (l: ListingInfo) => coverOf(storedMedia(l));
 
 const dateText = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
@@ -305,12 +306,15 @@ export function AdminPanel() {
 }
 
 function ListingRow({ listing }: { listing: ListingInfo }) {
-  const thumb = thumbUrl(listing);
+  const thumb = thumbOf(listing);
   return (
     <div className="flex gap-3">
       <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail */}
-        {thumb && <img src={thumb} alt="" loading="lazy" className="size-full object-cover" />}
+        {thumb?.type === "photo" && <img src={thumb.url} alt="" loading="lazy" className="size-full object-cover" />}
+        {thumb?.type === "video" && (
+          <video src={`${thumb.url}#t=0.5`} muted playsInline preload="metadata" className="size-full object-cover" />
+        )}
       </div>
       <div className="min-w-0 flex-1 text-sm">
         <div className="flex items-start justify-between gap-2">

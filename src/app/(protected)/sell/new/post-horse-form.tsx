@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { submitListing, updateListing } from "@/lib/submit-listing";
@@ -13,17 +13,27 @@ import { breeds, districts, formatInr } from "@/lib/sample-data";
 import {
   genders,
   limits,
-  photoSlots,
+  mediaRules,
   handlerExperience,
   trainingLevels,
-  type PhotoKey,
+  type MediaKind,
 } from "@/lib/horse-options";
+import { MediaGallery } from "@/components/media-gallery";
 
 /* ---------- Form data ---------- */
 
 // A photo/video/certificate: a new file picked on the phone (file), or one already
 // saved for this listing (file = null, path = where it is in storage).
 export type Media = { file: File | null; url: string; path?: string };
+
+/** One photo or video in the form (id is only for the page, not saved) */
+export type FormMedia = Media & { id: string; type: MediaKind; seconds?: number };
+
+let mediaCounter = 0;
+export const newMediaId = () => `m${Date.now()}-${++mediaCounter}`;
+
+// Some phones don't label files, so the file name is checked too
+const isVideoFile = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|3gp|webm|mkv|m4v)$/i.test(f.name);
 
 export type ListingFormData = {
   breed: string;
@@ -32,11 +42,12 @@ export type ListingFormData = {
   heightInches: string;
   colour: string;
   markings: string;
-  photos: Partial<Record<PhotoKey, Media>>;
-  video: (Media & { seconds: number }) | null;
+  /** Photos and videos in the order added (first photo = cover) */
+  media: FormMedia[];
   vaccinated: "" | "yes" | "no";
   vetCertificate: Media | null;
-  trainingLevel: string;
+  /** Ticked training boxes, e.g. ["Ridden", "Cart"] */
+  trainingLevels: string[];
   handlerExperience: string;
   pregnant: "" | "yes" | "no";
   priceInr: string;
@@ -48,18 +59,15 @@ export type ListingFormData = {
 
 const empty: ListingFormData = {
   breed: "", gender: "", ageYears: "", heightInches: "", colour: "", markings: "",
-  photos: {}, video: null,
-  vaccinated: "", vetCertificate: null, trainingLevel: "", handlerExperience: "", pregnant: "",
+  media: [],
+  vaccinated: "", vetCertificate: null, trainingLevels: [], handlerExperience: "", pregnant: "",
   priceInr: "", negotiable: true, district: "", town: "", description: "",
 };
 
 // Step names live in messages (sell.steps.*)
-const steps = ["details", "photos", "video", "health", "price", "preview"] as const;
+const steps = ["details", "media", "health", "price", "preview"] as const;
 
 type Errors = Partial<Record<string, string>>;
-
-// Photo boxes that are simply empty (the box turns red, no extra text)
-const REQUIRED = "required";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -77,7 +85,6 @@ function useOptionLabels() {
     training: (v: string) => (v ? o(`training.${optionKey(v)}`) : v),
     handler: (v: string) => (v ? o(`handler.${optionKey(v)}`) : v),
     district: (v: string) => (districtSlug(v) ? o(`district.${districtSlug(v)}`) : v),
-    photo: (key: string) => o(`photo.${key}`),
   };
 }
 
@@ -95,20 +102,18 @@ function validate(step: number, d: ListingFormData, t: Translate): Errors {
     if (!d.colour.trim()) e.colour = t("errors.colour");
   }
   if (step === 1) {
-    for (const slot of photoSlots) {
-      if (!d.photos[slot.key]) e[`photo-${slot.key}`] = REQUIRED;
-    }
+    // Any mix is fine, but at least 2 photos or 1 video
+    const photos = d.media.filter((m) => m.type === "photo").length;
+    const videos = d.media.filter((m) => m.type === "video").length;
+    if (videos < 1 && photos < mediaRules.minPhotosWithoutVideo) e.media = t("errors.mediaMin");
   }
   if (step === 2) {
-    if (!d.video) e.video = t("errors.video");
-  }
-  if (step === 3) {
     if (!d.vaccinated) e.vaccinated = t("errors.yesNo");
-    if (!d.trainingLevel) e.trainingLevel = t("errors.training");
+    if (d.trainingLevels.length === 0) e.trainingLevels = t("errors.training");
     if (!d.handlerExperience) e.handlerExperience = t("errors.handler");
     if (d.gender === "Mare" && !d.pregnant) e.pregnant = t("errors.yesNo");
   }
-  if (step === 4) {
+  if (step === 3) {
     const p = Number(d.priceInr);
     if (!d.priceInr || p < 1000) e.priceInr = t("errors.price");
     if (!d.district) e.district = t("errors.district");
@@ -126,6 +131,8 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
   const [checkingLogin, setCheckingLogin] = useState(true);
   const [step, setStep] = useState(0);
   const [data, setData] = useState<ListingFormData>(edit?.initial ?? empty);
+  // True while a video is being checked, trimmed or prepared on the media step
+  const [mediaBusy, setMediaBusy] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [submitState, setSubmitState] = useState<
     | { status: "idle" }
@@ -151,6 +158,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
 
   function next() {
     const e = validate(step, data, t);
+    if (step === 1 && mediaBusy) e.media = t("errors.mediaBusy");
     setErrors(e);
     if (Object.keys(e).length > 0) {
       document.querySelector("[data-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -181,7 +189,7 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
         colour: data.colour.trim(),
         markings: data.markings,
         vaccinated: data.vaccinated === "yes",
-        trainingLevel: data.trainingLevel,
+        trainingLevels: data.trainingLevels,
         handlerExperience: data.handlerExperience,
         pregnant: data.gender === "Mare" ? data.pregnant === "yes" : null,
         priceInr: Number(data.priceInr),
@@ -191,11 +199,12 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
         description: data.description,
       };
       const onProgress = (key: string, values?: MessageValues) => setSubmitState({ status: "working", key, values });
+      const draftMedia = data.media.map((m) => ({ type: m.type, file: m.file, path: m.path, seconds: m.seconds }));
 
       if (edit) {
         const slug = await updateListing(
           edit.listingId,
-          { ...fields, photos: data.photos, video: data.video, vetCertificate: data.vetCertificate },
+          { ...fields, media: draftMedia, vetCertificate: data.vetCertificate },
           onProgress,
         );
         setSubmitState({ status: "done", slug });
@@ -203,30 +212,8 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
         return;
       }
 
-      const photos = Object.fromEntries(
-        Object.entries(data.photos).flatMap(([k, m]) => (m?.file ? [[k, m.file]] : [])),
-      );
       const slug = await submitListing(
-        {
-          breed: data.breed,
-          gender: data.gender,
-          ageYears: Number(data.ageYears),
-          heightInches: Number(data.heightInches),
-          colour: data.colour.trim(),
-          markings: data.markings,
-          photos,
-          video: data.video?.file ? { file: data.video.file, seconds: data.video.seconds } : null,
-          vaccinated: data.vaccinated === "yes",
-          vetCertificate: data.vetCertificate?.file ?? null,
-          trainingLevel: data.trainingLevel,
-          handlerExperience: data.handlerExperience,
-          pregnant: data.gender === "Mare" ? data.pregnant === "yes" : null,
-          priceInr: Number(data.priceInr),
-          negotiable: data.negotiable,
-          district: data.district,
-          town: data.town,
-          description: data.description,
-        },
+        { ...fields, media: draftMedia, vetCertificate: data.vetCertificate?.file ?? null },
         onProgress,
       );
       setSubmitState({ status: "done", slug });
@@ -267,11 +254,10 @@ export function PostHorseForm({ edit }: { edit?: { listingId: string; initial: L
 
       <div className="mt-6">
         {step === 0 && <DetailsStep data={data} set={set} errors={errors} />}
-        {step === 1 && <PhotosStep data={data} setData={setData} errors={errors} setErrors={setErrors} />}
-        {step === 2 && <VideoStep data={data} set={set} errors={errors} setErrors={setErrors} />}
-        {step === 3 && <HealthStep data={data} set={set} errors={errors} />}
-        {step === 4 && <PriceStep data={data} set={set} errors={errors} />}
-        {step === 5 && <PreviewStep data={data} goTo={setStep} />}
+        {step === 1 && <MediaStep data={data} setData={setData} errors={errors} setErrors={setErrors} onBusyChange={setMediaBusy} />}
+        {step === 2 && <HealthStep data={data} set={set} errors={errors} />}
+        {step === 3 && <PriceStep data={data} set={set} errors={errors} />}
+        {step === 4 && <PreviewStep data={data} goTo={setStep} />}
       </div>
 
       {working && (
@@ -459,114 +445,101 @@ function DetailsStep({ data, set, errors }: StepProps) {
   );
 }
 
-/* ---------- Step 2: photos ---------- */
+/* ---------- Step 2: photos & videos (one page) ---------- */
 
-function PhotosStep({
-  data, setData, errors, setErrors,
+// A picked video longer than 20 seconds, waiting for the seller to choose which part to keep
+type Pending = { file: File; url: string; duration: number; start: number };
+
+/**
+ * Any mix of photos and videos: up to 8 photos and 2 videos (10 files).
+ * Sellers can pick them all in one go. Photos are added straight away; each video is
+ * checked in turn (longer than 20 seconds -> choose which part to keep; big -> shrunk).
+ * The first photo is the cover.
+ */
+function MediaStep({
+  data, setData, errors, setErrors, onBusyChange,
 }: {
   data: ListingFormData;
   setData: React.Dispatch<React.SetStateAction<ListingFormData>>;
   errors: Errors;
   setErrors: React.Dispatch<React.SetStateAction<Errors>>;
+  onBusyChange: (busy: boolean) => void;
 }) {
   const t = useTranslations("sell");
-  const label = useOptionLabels();
-
-  function pick(key: PhotoKey, file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setErrors((e) => ({ ...e, [`photo-${key}`]: t("errors.photoNotImage") }));
-      return;
-    }
-    if (file.size > limits.photoMb * 1024 * 1024) {
-      setErrors((e) => ({ ...e, [`photo-${key}`]: t("errors.photoTooBig", { mb: limits.photoMb }) }));
-      return;
-    }
-    setData((d) => {
-      const old = d.photos[key];
-      if (old) URL.revokeObjectURL(old.url);
-      return { ...d, photos: { ...d.photos, [key]: { file, url: URL.createObjectURL(file) } } };
-    });
-    setErrors((e) => ({ ...e, [`photo-${key}`]: undefined }));
-  }
-
-  const missing = photoSlots.some((s) => errors[`photo-${s.key}`]);
-
-  return (
-    <div>
-      <p className="text-sm text-muted-foreground">
-        {t("photosIntro")}
-      </p>
-      {missing && (
-        <p data-error className="mt-3 text-sm text-destructive">{t("errors.allPhotos")}</p>
-      )}
-      <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {photoSlots.map((slot, i) => {
-          const photo = data.photos[slot.key];
-          const error = errors[`photo-${slot.key}`];
-          return (
-            <li key={slot.key}>
-              <label
-                className={`relative flex aspect-square cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed text-center ${
-                  error ? "border-destructive" : photo ? "border-transparent" : "hover:border-primary"
-                }`}
-              >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- local preview of the seller's own file
-                  <img src={photo.url} alt={label.photo(slot.key)} className="absolute inset-0 size-full object-cover" />
-                ) : (
-                  <span className="px-2">
-                    <span className="block text-2xl text-muted-foreground" aria-hidden>+</span>
-                    <span className="block text-sm font-medium">{label.photo(slot.key)}</span>
-                    <span className="mt-0.5 block text-[11px] leading-tight text-muted-foreground">{t(`photoHint.${slot.key}`)}</span>
-                  </span>
-                )}
-                {photo && (
-                  <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1 text-xs text-white">
-                    {label.photo(slot.key)}{i === 0 ? ` · ${t("cover")}` : ""} · {t("tapToChange")}
-                  </span>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => pick(slot.key, e.target.files?.[0])}
-                />
-              </label>
-              {error && error !== REQUIRED && <p className="mt-1 text-xs text-destructive">{error}</p>}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-/* ---------- Step 3: walking video ---------- */
-
-// A picked video that is too long and waits for the seller to choose 20 seconds
-type Pending = { file: File; url: string; duration: number; start: number };
-
-function VideoStep({
-  data, set, errors, setErrors,
-}: StepProps & { setErrors: React.Dispatch<React.SetStateAction<Errors>> }) {
-  const t = useTranslations("sell");
+  const tm = useTranslations("sell.media");
   const tv = useTranslations("sell.video");
   const max = limits.videoSeconds;
+  const [queue, setQueue] = useState<File[]>([]); // videos waiting to be checked
   const [reading, setReading] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [preparing, setPreparing] = useState<number | null>(null); // progress 0–1
+  const [notes, setNotes] = useState<string[]>([]);
   const previewRef = useRef<HTMLVideoElement>(null);
 
-  const showError = (message: string) => setErrors((e) => ({ ...e, video: message }));
+  const photos = data.media.filter((m) => m.type === "photo").length;
+  const videos = data.media.filter((m) => m.type === "video").length;
+  const working = reading || pending !== null || preparing !== null; // one video in progress
+  const busy = working || queue.length > 0;
+  const full = photos >= mediaRules.maxPhotos && videos + queue.length + (working ? 1 : 0) >= mediaRules.maxVideos;
 
-  async function pick(file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("video/")) return showError(t("errors.videoNotVideo"));
-    setErrors((e) => ({ ...e, video: undefined }));
-    if (pending) URL.revokeObjectURL(pending.url);
-    setPending(null);
+  useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
 
+  const addNote = useCallback((n: string) => setNotes((all) => [...all, n]), []);
+
+  function addVideo(file: File, seconds: number, url: string) {
+    setData((d) => ({
+      ...d,
+      media: [...d.media, { id: newMediaId(), type: "video", file, url, seconds: Math.round(seconds) }],
+    }));
+    setErrors((e) => ({ ...e, media: undefined }));
+  }
+
+  /** Files chosen with the button: photos go in now, videos join the queue. */
+  function pickMany(files: FileList | null) {
+    if (!files?.length) return;
+    setNotes([]);
+    setErrors((e) => ({ ...e, media: undefined }));
+    const all = Array.from(files);
+    const vids = all.filter(isVideoFile);
+    const pics = all.filter((f) => !isVideoFile(f));
+
+    // Photos
+    const photoRoom = mediaRules.maxPhotos - photos;
+    const added: FormMedia[] = [];
+    let extraPhotos = 0;
+    for (const f of pics) {
+      if (!f.type.startsWith("image/")) {
+        addNote(t("errors.notMedia", { name: f.name }));
+      } else if (f.size > limits.photoMb * 1024 * 1024) {
+        addNote(t("errors.photoTooBig", { mb: limits.photoMb }));
+      } else if (added.length >= photoRoom) {
+        extraPhotos++;
+      } else {
+        added.push({ id: newMediaId(), type: "photo", file: f, url: URL.createObjectURL(f) });
+      }
+    }
+    if (added.length) setData((d) => ({ ...d, media: [...d.media, ...added] }));
+    if (extraPhotos) addNote(tm("limitPhotos", { max: mediaRules.maxPhotos, count: extraPhotos }));
+
+    // Videos
+    const videoRoom = mediaRules.maxVideos - videos - queue.length - (working ? 1 : 0);
+    const accepted = vids.slice(0, Math.max(0, videoRoom));
+    if (vids.length > accepted.length) {
+      addNote(tm("limitVideos", { max: mediaRules.maxVideos, count: vids.length - accepted.length }));
+    }
+    if (accepted.length) setQueue((q) => [...q, ...accepted]);
+  }
+
+  // Check the next waiting video when nothing else is in progress
+  useEffect(() => {
+    if (working || queue.length === 0) return;
+    const [nextVideo, ...rest] = queue;
+    setQueue(rest);
+    void processVideo(nextVideo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue, working]);
+
+  async function processVideo(file: File) {
     setReading(true);
     const url = URL.createObjectURL(file);
     let duration = 0;
@@ -575,36 +548,38 @@ function VideoStep({
     } catch (err) {
       setReading(false);
       URL.revokeObjectURL(url);
-      return showError(errorText(t, err));
+      return addNote(errorText(t, err));
     }
-    setReading(false);
-
     const tooLong = duration > max + 0.5;
     const tooBig = file.size > limits.videoUploadMb * 1024 * 1024;
 
     if (!canPrepareVideo()) {
       // Older browsers can't shorten videos, so the seller must record a short one
-      URL.revokeObjectURL(url);
-      if (tooLong) return showError(t("errors.videoTooLong", { seconds: Math.round(duration), max }));
-      if (tooBig) return showError(t("errors.videoTooBig"));
-      return accept({ file, seconds: Math.round(duration) }, url);
+      setReading(false);
+      if (tooLong) {
+        URL.revokeObjectURL(url);
+        return addNote(t("errors.videoTooLong", { seconds: Math.round(duration), max }));
+      }
+      if (tooBig) {
+        URL.revokeObjectURL(url);
+        return addNote(t("errors.videoTooBig"));
+      }
+      return addVideo(file, duration, url);
     }
 
     if (tooLong) {
       // Let the seller choose which 20 seconds to keep
       setPending({ file, url, duration, start: 0 });
+      setReading(false);
       return;
     }
-    // Short enough: shrink it only if the file is big
     if (file.size > limits.videoKeepAsIsMb * 1024 * 1024) {
+      // Short but big: shrink it so it uploads quickly
+      setReading(false);
       return runPrepare(url, 0, duration);
     }
-    accept({ file, seconds: Math.round(duration) }, url);
-  }
-
-  function accept(video: { file: File; seconds: number }, url: string) {
-    if (data.video) URL.revokeObjectURL(data.video.url);
-    set("video", { ...video, url });
+    setReading(false);
+    addVideo(file, duration, url);
   }
 
   async function runPrepare(sourceUrl: string, start: number, length: number) {
@@ -613,34 +588,80 @@ function VideoStep({
       const result = await prepareVideo(sourceUrl, start, length, setPreparing);
       URL.revokeObjectURL(sourceUrl);
       setPending(null);
-      accept(result, URL.createObjectURL(result.file));
+      addVideo(result.file, result.seconds, URL.createObjectURL(result.file));
     } catch (err) {
-      showError(errorText(t, err));
+      addNote(errorText(t, err));
+      setPending(null);
     } finally {
       setPreparing(null);
     }
   }
 
+  function skipPending() {
+    if (pending) URL.revokeObjectURL(pending.url);
+    setPending(null);
+  }
+
+  function remove(id: string) {
+    setData((d) => {
+      const m = d.media.find((x) => x.id === id);
+      if (m?.file) URL.revokeObjectURL(m.url);
+      return { ...d, media: d.media.filter((x) => x.id !== id) };
+    });
+  }
+
   // Keep the trimming preview inside the chosen 20 seconds
   function onPreviewTime() {
     const v = previewRef.current;
-    if (v && pending && v.currentTime >= pending.start + max) {
-      v.currentTime = pending.start;
-    }
+    if (v && pending && v.currentTime >= pending.start + max) v.currentTime = pending.start;
   }
 
-  const busy = reading || preparing !== null;
+  const coverId = (data.media.find((m) => m.type === "photo") ?? data.media.find((m) => m.type === "video"))?.id;
+
+  const picker = (
+    <input
+      type="file"
+      accept="image/*,video/*"
+      multiple
+      className="sr-only"
+      disabled={full}
+      onChange={(e) => {
+        pickMany(e.target.files);
+        e.target.value = ""; // allow picking the same files again
+      }}
+    />
+  );
 
   return (
-    <div className="grid gap-4">
-      <div className="rounded-xl bg-muted p-4 text-sm">
-        <p className="font-medium">{tv("howTitle")}</p>
-        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-          <li>{tv("how1")}</li>
-          <li>{tv("how2")}</li>
-          <li>{tv("how3", { max })}</li>
-        </ul>
+    <div className="grid gap-5">
+      {/* One button for everything */}
+      <div className="rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 p-4 text-center">
+        <p className="text-sm font-medium">{tm("title")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {tm("intro", { photos: mediaRules.maxPhotos, videos: mediaRules.maxVideos, seconds: max })}
+        </p>
+        <label
+          className={`mt-3 inline-flex h-12 items-center justify-center rounded-lg px-5 text-sm font-medium ${
+            full ? "cursor-not-allowed bg-muted text-muted-foreground" : "cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+          }`}
+        >
+          + {data.media.length ? tm("addMore") : tm("pickAll")}
+          {picker}
+        </label>
+        <p className="mt-3 text-xs font-medium tabular-nums">
+          {tm("status", { photos, maxPhotos: mediaRules.maxPhotos, videos, maxVideos: mediaRules.maxVideos })}
+        </p>
+        {full && <p className="mt-1 text-xs text-muted-foreground">{tm("full")}</p>}
       </div>
+
+      {notes.length > 0 && (
+        <ul className="grid gap-1 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+          {notes.map((n, i) => (
+            <li key={i}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {errors.media && <p data-error className="text-sm text-destructive">{errors.media}</p>}
 
       {/* Choosing which 20 seconds to keep */}
       {pending && preparing === null && (
@@ -658,7 +679,6 @@ function VideoStep({
             muted
             playsInline
             autoPlay
-            loop={false}
             onTimeUpdate={onPreviewTime}
             onEnded={() => previewRef.current && (previewRef.current.currentTime = pending.start)}
             className="aspect-video w-full rounded-lg bg-black"
@@ -686,13 +706,22 @@ function VideoStep({
             }}
             className="w-full accent-[var(--primary)]"
           />
-          <button
-            type="button"
-            onClick={() => runPrepare(pending.url, pending.start, max)}
-            className="h-12 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            {tv("useSeconds", { max })}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={skipPending}
+              className="h-12 rounded-lg border px-4 text-sm font-medium hover:bg-muted"
+            >
+              {tm("skipVideo")}
+            </button>
+            <button
+              type="button"
+              onClick={() => runPrepare(pending.url, pending.start, max)}
+              className="h-12 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {tv("useSeconds", { max })}
+            </button>
+          </div>
         </div>
       )}
 
@@ -706,40 +735,61 @@ function VideoStep({
           </div>
         </div>
       )}
-
-      {/* The final video */}
-      {data.video && !pending && preparing === null && (
-        <div>
-          <video src={data.video.url} controls playsInline className="aspect-video w-full rounded-xl bg-black" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            {tv("seconds", { seconds: data.video.seconds })} ·{" "}
-            {data.video.file ? `${(data.video.file.size / 1024 / 1024).toFixed(1)} MB` : tv("current")}
-          </p>
-        </div>
-      )}
-
-      {!busy && (
-        <label
-          className={`flex h-14 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed text-sm font-medium hover:border-primary ${
-            errors.video ? "border-destructive" : ""
-          }`}
-        >
-          {data.video || pending ? tv("chooseDifferent") : `+ ${tv("choose")}`}
-          <input
-            type="file"
-            accept="video/*"
-            className="sr-only"
-            onChange={(e) => {
-              pick(e.target.files?.[0]);
-              e.target.value = ""; // allow picking the same file again
-            }}
-          />
-        </label>
-      )}
       {reading && <p className="text-sm text-muted-foreground">{tv("checking")}</p>}
-      {errors.video && <p data-error className="text-sm text-destructive">{errors.video}</p>}
+      {queue.length > 0 && <p className="text-xs text-muted-foreground">{tm("waiting", { count: queue.length })}</p>}
+
+      {/* Everything added so far, in order */}
+      {data.media.length > 0 && (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {data.media.map((m) => (
+            <li key={m.id} className="relative aspect-square overflow-hidden rounded-xl border bg-muted">
+              {m.type === "photo" ? (
+                // eslint-disable-next-line @next/next/no-img-element -- local preview of the seller's own file
+                <img src={m.url} alt="" className="size-full object-cover" />
+              ) : (
+                <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" className="size-full bg-black object-cover" />
+              )}
+              {m.id === coverId && (
+                <span className="absolute left-1.5 top-1.5 rounded-md bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+                  {tm("cover")}
+                </span>
+              )}
+              {m.type === "video" && (
+                <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/65 px-2 py-0.5 text-[11px] text-white">
+                  ▶ {m.seconds ?? "?"}s
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(m.id)}
+                aria-label={tm("remove")}
+                className="absolute right-1.5 top-1.5 flex size-8 items-center justify-center rounded-full bg-black/60 text-sm text-white hover:bg-black/80"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Tips */}
+      <div className="rounded-xl bg-muted p-4 text-sm">
+        <p className="font-medium">{tm("tipsTitle")}</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+          <li>{tm("tip1")}</li>
+          <li>{tm("tip2")}</li>
+          <li>{tm("tip3", { max })}</li>
+        </ul>
+      </div>
     </div>
   );
+}
+
+/** Ticks or unticks one training box. "Untrained" and the others exclude each other. */
+function toggleTraining(current: string[], value: string): string[] {
+  if (current.includes(value)) return current.filter((v) => v !== value);
+  if (value === "Untrained") return ["Untrained"];
+  return [...current.filter((v) => v !== "Untrained"), value];
 }
 
 function formatTime(seconds: number) {
@@ -771,12 +821,35 @@ function HealthStep({ data, set, errors }: StepProps) {
         </label>
       </Field>
 
-      <Field id="training" label={t("training")} error={errors.trainingLevel}>
-        <Select
-          id="training" value={data.trainingLevel} onChange={(v) => set("trainingLevel", v)} error={errors.trainingLevel}
-          placeholder={t("chooseTraining")} options={trainingLevels.map((v) => ({ value: v, label: label.training(v) }))}
-        />
-      </Field>
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium">{t("training")}</legend>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {trainingLevels.map((v) => {
+            const checked = data.trainingLevels.includes(v);
+            return (
+              <label
+                key={v}
+                className={`flex h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 text-sm ${
+                  checked ? "border-primary bg-primary/10 font-medium text-primary" : "hover:bg-muted"
+                } ${errors.trainingLevels ? "border-destructive" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => set("trainingLevels", toggleTraining(data.trainingLevels, v))}
+                  className="size-5 accent-[var(--primary)]"
+                />
+                {label.training(v)}
+              </label>
+            );
+          })}
+        </div>
+        {errors.trainingLevels ? (
+          <p data-error className="text-sm text-destructive">{errors.trainingLevels}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">{t("trainingHint")}</p>
+        )}
+      </fieldset>
 
       <Field id="handler" label={t("handler")} error={errors.handlerExperience}>
         <Select
@@ -863,32 +936,25 @@ function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: numbe
     [td("height"), tc("inches", { count: Number(data.heightInches) }), 0],
     [td("colour"), data.colour, 0],
     [td("markings"), data.markings || "—", 0],
-    [td("vaccinated"), yesNo(data.vaccinated), 3],
-    [td("vetCertificate"), data.vetCertificate ? t("uploaded") : td("notProvided"), 3],
-    [td("training"), label.training(data.trainingLevel), 3],
-    [td("handler"), label.handler(data.handlerExperience), 3],
-    ...(data.gender === "Mare" ? [[td("pregnant"), yesNo(data.pregnant), 3] as [string, string, number]] : []),
-    [t("location"), `${data.town}, ${label.district(data.district)}`, 4],
+    [td("vaccinated"), yesNo(data.vaccinated), 2],
+    [td("vetCertificate"), data.vetCertificate ? t("uploaded") : td("notProvided"), 2],
+    [td("training"), data.trainingLevels.map(label.training).join(", "), 2],
+    [td("handler"), label.handler(data.handlerExperience), 2],
+    ...(data.gender === "Mare" ? [[td("pregnant"), yesNo(data.pregnant), 2] as [string, string, number]] : []),
+    [t("location"), `${data.town}, ${label.district(data.district)}`, 3],
   ];
 
   return (
     <div>
       <p className="text-sm text-muted-foreground">{t("intro")}</p>
 
-      {data.video && (
-        <video src={data.video.url} controls playsInline className="mt-4 aspect-video w-full rounded-xl bg-black" />
-      )}
-      <ul className="mt-3 grid grid-cols-5 gap-2">
-        {photoSlots.map((slot) => {
-          const p = data.photos[slot.key];
-          return (
-            <li key={slot.key} className="aspect-square overflow-hidden rounded-lg bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local preview */}
-              {p && <img src={p.url} alt={label.photo(slot.key)} className="size-full object-cover" />}
-            </li>
-          );
-        })}
-      </ul>
+      <div className="mt-4">
+        <MediaGallery
+          items={data.media.map((m) => ({ type: m.type, url: m.url, seconds: m.seconds }))}
+          alt={`${label.breed(data.breed)} ${label.gender(data.gender)}`}
+          labels={{ photo: t("photo"), video: t("video"), noMedia: t("noPhoto"), previous: t("previous"), next: t("next") }}
+        />
+      </div>
       <button type="button" onClick={() => goTo(1)} className="mt-2 text-sm text-primary hover:underline">
         {t("editMedia")}
       </button>
@@ -918,7 +984,7 @@ function PreviewStep({ data, goTo }: { data: ListingFormData; goTo: (step: numbe
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
           <h3 className="font-semibold">{t("about")}</h3>
-          <button type="button" onClick={() => goTo(4)} className="text-xs text-primary hover:underline">{t("edit")}</button>
+          <button type="button" onClick={() => goTo(3)} className="text-xs text-primary hover:underline">{t("edit")}</button>
         </div>
         {data.description.trim() ? (
           <p className="mt-1 whitespace-pre-line leading-relaxed">{data.description}</p>

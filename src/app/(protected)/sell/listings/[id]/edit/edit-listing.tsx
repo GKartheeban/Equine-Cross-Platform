@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { photoSlots, type PhotoKey } from "@/lib/horse-options";
-import { PostHorseForm, type ListingFormData, type Media } from "../../../new/post-horse-form";
-
-const mediaUrl = (path: string) =>
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-media/${path}`;
+import { mediaUrl, storedMedia } from "@/lib/media";
+import { trainingFromOld } from "@/lib/horse-options";
+import { PostHorseForm, newMediaId, type ListingFormData } from "../../../new/post-horse-form";
 
 /** Loads the seller's listing and opens the listing form, already filled in. */
 export function EditListing({ listingId }: { listingId: string }) {
@@ -40,11 +38,15 @@ export function EditListing({ listingId }: { listingId: string }) {
       if (l.status === "removed")
         return setState({ status: "missing", reason: "removed" });
 
-      const photos: Partial<Record<PhotoKey, Media>> = {};
-      for (const slot of photoSlots) {
-        const path = (l.photo_paths as Record<string, string> | null)?.[slot.key];
-        if (path) photos[slot.key] = { file: null, url: mediaUrl(path), path };
-      }
+      // Saved photos and videos, in order (older listings: their 5 photos + walking video)
+      const media = storedMedia(l).map((m) => ({
+        id: newMediaId(),
+        type: m.type,
+        file: null,
+        url: mediaUrl(m.path),
+        path: m.path,
+        seconds: m.seconds,
+      }));
 
       setState({
         status: "ready",
@@ -55,13 +57,10 @@ export function EditListing({ listingId }: { listingId: string }) {
           heightInches: String(l.height_inches),
           colour: l.colour,
           markings: l.markings ?? "",
-          photos,
-          video: l.video_path
-            ? { file: null, url: mediaUrl(l.video_path), path: l.video_path, seconds: l.video_seconds ?? 0 }
-            : null,
+          media,
           vaccinated: l.vaccinated ? "yes" : "no",
           vetCertificate: l.vet_certificate_path ? { file: null, url: "", path: l.vet_certificate_path } : null,
-          trainingLevel: l.training_level,
+          trainingLevels: l.training_levels?.length ? l.training_levels : trainingFromOld(l.training_level),
           handlerExperience: l.handler_experience,
           pregnant: l.pregnant === null ? "" : l.pregnant ? "yes" : "no",
           priceInr: String(l.price_inr),

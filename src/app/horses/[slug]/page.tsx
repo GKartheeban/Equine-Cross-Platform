@@ -8,7 +8,7 @@ import { ContactSeller } from "@/components/contact-seller";
 import { ListingCard } from "@/components/listing-card";
 import { SaveButton } from "@/components/save-button";
 import { TrackEvent } from "@/components/track-event";
-import { photoSlots } from "@/lib/horse-options";
+import { MediaGallery } from "@/components/media-gallery";
 import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
 import {
   getListingBySlug,
@@ -36,7 +36,7 @@ async function labelsFor(horse: Listing) {
     breed: b ? o(`breed.${b}`) : horse.breed,
     gender: o(`gender.${optionKey(horse.gender)}`),
     district: d ? o(`district.${d}`) : horse.district,
-    training: o(`training.${optionKey(horse.trainingLevel)}`),
+    training: horse.trainingLevels.map((v) => o(`training.${optionKey(v)}`)).join(", "),
     handler: o(`handler.${optionKey(horse.handlerExperience)}`),
   };
 }
@@ -65,13 +65,12 @@ export default async function HorseDetailPage({ params }: Props) {
   const horse = await loadListing(slug);
   if (!horse) notFound();
 
-  const [similar, seller, l, t, c, o, locale] = await Promise.all([
+  const [similar, seller, l, t, c, locale] = await Promise.all([
     getSimilarListings(horse),
     getSellerProfile(horse.sellerId),
     labelsFor(horse),
     getTranslations("detail"),
     getTranslations("common"),
-    getTranslations("options"),
     getLocale(),
   ]);
   const title = `${l.breed} · ${l.gender}`;
@@ -99,7 +98,7 @@ export default async function HorseDetailPage({ params }: Props) {
     "@type": "Product",
     name: `${horse.breed} ${horse.gender.toLowerCase()} – ${horse.district}`,
     description: horse.description ?? `${horse.breed} ${horse.gender.toLowerCase()} for sale in ${horse.town}, ${horse.district}`,
-    image: Object.values(horse.photoUrls),
+    image: horse.media.filter((m) => m.type === "photo").map((m) => m.url),
     offers: {
       "@type": "Offer",
       price: horse.priceInr,
@@ -132,7 +131,7 @@ export default async function HorseDetailPage({ params }: Props) {
       <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Left column: media and details */}
         <div className="min-w-0">
-          <Media horse={horse} photoLabel={(key) => o(`photo.${key}`)} t={t} />
+          <Media horse={horse} t={t} />
 
           <header className="mt-6">
             <div className="flex items-start justify-between gap-3">
@@ -227,49 +226,14 @@ export default async function HorseDetailPage({ params }: Props) {
 // A translator for the "detail" texts, passed to the small parts below
 type T = (key: string, values?: Record<string, string | number>) => string;
 
-/** Walking video on top, then the 5 photos. Tap a photo to open it full size. */
-function Media({ horse, photoLabel, t }: { horse: Listing; photoLabel: (key: string) => string; t: T }) {
+/** All photos and videos: one big, the rest underneath. */
+function Media({ horse, t }: { horse: Listing; t: T }) {
   return (
-    <div>
-      {horse.videoUrl ? (
-        <video
-          src={horse.videoUrl}
-          poster={horse.coverUrl ?? undefined}
-          controls
-          playsInline
-          muted
-          preload="metadata"
-          className="aspect-video w-full rounded-xl bg-black object-contain"
-        />
-      ) : horse.coverUrl ? (
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
-          <Image src={horse.coverUrl} alt={horse.breed} fill loading="eager" fetchPriority="high" sizes="(min-width: 1024px) 66vw, 100vw" className="object-contain" />
-        </div>
-      ) : null}
-
-      <ul className="mt-3 grid grid-cols-5 gap-2">
-        {photoSlots.map((slot) => {
-          const url = horse.photoUrls[slot.key];
-          const label = photoLabel(slot.key);
-          return (
-            <li key={slot.key} className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-              {url ? (
-                <a href={url} target="_blank" rel="noopener" aria-label={t("openPhoto", { label })}>
-                  <Image src={url} alt={t("photoView", { label })} fill sizes="(min-width: 1024px) 13vw, 20vw" className="object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-0.5 py-0.5 text-center text-[10px] text-white sm:text-xs">
-                    {label}
-                  </span>
-                </a>
-              ) : (
-                <span className="flex size-full items-end justify-center p-1 text-center text-[10px] text-muted-foreground">
-                  {label}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <MediaGallery
+      items={horse.media}
+      alt={horse.breed}
+      labels={{ photo: t("photo"), video: t("video"), noMedia: t("noMedia"), previous: t("previous"), next: t("next") }}
+    />
   );
 }
 
