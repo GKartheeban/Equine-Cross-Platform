@@ -13,14 +13,21 @@ const inputClass =
 const primaryButton =
   "h-12 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50";
 
-export function LoginForm({ next }: { next: string }) {
+/**
+ * Phone + one-time code, in two modes:
+ *  - "login":  existing users only. A number with no account gets "Sign up instead".
+ *  - "signup": new users. Also asks for their name, saved to their profile.
+ *    (If the number already has an account, it simply logs them in.)
+ */
+export function LoginForm({ next, mode }: { next: string; mode: "login" | "signup" }) {
   const router = useRouter();
   const t = useTranslations("login");
   const [step, setStep] = useState<"phone" | "code">("phone");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<"" | ErrorKey>("");
   const [resendIn, setResendIn] = useState(0);
 
   // Countdown before "Resend code" becomes available
@@ -31,20 +38,20 @@ export function LoginForm({ next }: { next: string }) {
   }, [resendIn]);
 
   const fullPhone = `+91${phone}`;
+  const nextQuery = next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
 
   async function sendCode() {
     setError("");
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-      setError(t("errPhone"));
-      return;
-    }
+    if (mode === "signup" && name.trim().length < 2) return setError("errName");
+    if (!/^[6-9]\d{9}$/.test(phone)) return setError("errPhone");
     setBusy(true);
-    const { error } = await createClient().auth.signInWithOtp({ phone: fullPhone });
+    const { error } = await createClient().auth.signInWithOtp({
+      phone: fullPhone,
+      // Log in never creates a new account
+      options: { shouldCreateUser: mode === "signup" },
+    });
     setBusy(false);
-    if (error) {
-      setError(t(friendlyError(error.message)));
-      return;
-    }
+    if (error) return setError(friendlyError(error.message));
     setStep("code");
     setCode("");
     setResendIn(RESEND_SECONDS);
@@ -52,24 +59,35 @@ export function LoginForm({ next }: { next: string }) {
 
   async function verifyCode() {
     setError("");
-    if (!/^\d{6}$/.test(code)) {
-      setError(t("errCode"));
-      return;
-    }
+    if (!/^\d{6}$/.test(code)) return setError("errCode");
     setBusy(true);
-    const { error } = await createClient().auth.verifyOtp({
-      phone: fullPhone,
-      token: code,
-      type: "sms",
-    });
-    setBusy(false);
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: code, type: "sms" });
     if (error) {
-      setError(t(friendlyError(error.message)));
-      return;
+      setBusy(false);
+      return setError(friendlyError(error.message));
     }
+    // New account: save the name. Only fills an empty name, never replaces an existing one.
+    if (mode === "signup" && data.user) {
+      await supabase.from("profiles").update({ full_name: name.trim() }).eq("id", data.user.id).is("full_name", null);
+    }
+    setBusy(false);
     router.replace(next);
     router.refresh();
   }
+
+  const errorText =
+    error === "errNoAccount"
+      ? t.rich("errNoAccount", {
+          signup: (c) => (
+            <Link href={`/signup${nextQuery}`} className="font-medium underline">
+              {c}
+            </Link>
+          ),
+        })
+      : error
+        ? t(error)
+        : null;
 
   return (
     <div className="mt-8">
@@ -81,6 +99,23 @@ export function LoginForm({ next }: { next: string }) {
           }}
           className="grid gap-4"
         >
+          {mode === "signup" && (
+            <div className="grid gap-1.5">
+              <label htmlFor="name" className="text-sm font-medium">{t("name")}</label>
+              <input
+                id="name"
+                type="text"
+                autoComplete="name"
+                maxLength={60}
+                placeholder={t("namePlaceholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
+            </div>
+          )}
           <div className="grid gap-1.5">
             <label htmlFor="phone" className="text-sm font-medium">{t("mobile")}</label>
             <div className="flex">
@@ -97,11 +132,11 @@ export function LoginForm({ next }: { next: string }) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 className={`${inputClass} rounded-l-none`}
-                autoFocus
+                autoFocus={mode === "login"}
               />
             </div>
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {errorText && <p role="alert" className="text-sm text-destructive">{errorText}</p>}
           <button type="submit" disabled={busy} className={primaryButton}>
             {busy ? t("sending") : t("sendCode")}
           </button>
@@ -142,9 +177,9 @@ export function LoginForm({ next }: { next: string }) {
               autoFocus
             />
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {errorText && <p role="alert" className="text-sm text-destructive">{errorText}</p>}
           <button type="submit" disabled={busy} className={primaryButton}>
-            {busy ? t("checking") : t("verify")}
+            {busy ? t("checking") : mode === "signup" ? t("verifySignup") : t("verify")}
           </button>
           <button
             type="button"
@@ -157,7 +192,20 @@ export function LoginForm({ next }: { next: string }) {
         </form>
       )}
 
-      <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
+      {/* Wrong form? Switch here */}
+      <div className="mt-8 border-t pt-6 text-center">
+        <p className="text-sm text-muted-foreground">{mode === "login" ? t("newHere") : t("haveAccount")}</p>
+        <Link
+          href={`${mode === "login" ? "/signup" : "/login"}${nextQuery}`}
+          replace
+          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-1 rounded-lg border text-sm font-medium hover:border-primary/60 hover:text-primary"
+        >
+          {mode === "login" ? t("signupLink") : t("loginLink")}
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+
+      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
         {t.rich("agree", {
           terms: (c) => <Link href="/terms" className="underline">{c}</Link>,
           privacy: (c) => <Link href="/privacy" className="underline">{c}</Link>,
@@ -167,9 +215,15 @@ export function LoginForm({ next }: { next: string }) {
   );
 }
 
+type ErrorKey =
+  | "errName" | "errPhone" | "errCode" | "errNoAccount"
+  | "errWrongCode" | "errTooMany" | "errNotSetUp" | "errGeneric";
+
 // Turns technical Supabase messages into a plain-language message key
-function friendlyError(message: string) {
+function friendlyError(message: string): ErrorKey {
   const m = message.toLowerCase();
+  // Log in with a number that has no account yet
+  if (m.includes("signups not allowed") || m.includes("user not found")) return "errNoAccount";
   if (m.includes("expired") || m.includes("invalid")) return "errWrongCode";
   if (m.includes("rate") || m.includes("too many")) return "errTooMany";
   if (m.includes("provider") || m.includes("disabled") || m.includes("unsupported")) return "errNotSetUp";

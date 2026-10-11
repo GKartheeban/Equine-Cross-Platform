@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type State = { status: "loading" } | { status: "out" } | { status: "in"; phone: string };
 
-// Shows "Login" for visitors, or an "Account" menu with Logout when logged in.
+// Visitors: one "Log in / Sign up" button on laptops; an account icon with both options on phones.
+// Logged in: an "Account" menu (an icon on phones) with profile, listings, saved, logout.
 // Runs in the browser and reads the saved login, so pages stay fast and cacheable.
 export function AccountMenu() {
   const router = useRouter();
@@ -53,27 +55,68 @@ export function AccountMenu() {
     router.refresh();
   }
 
-  const linkClass = "rounded-md px-3 py-2 text-muted-foreground hover:text-foreground";
-
-  // Keeps the same width while checking, so the header doesn't jump
-  if (state.status === "loading") {
-    return <span className={`${linkClass} invisible`} aria-hidden>{t("login")}</span>;
-  }
-
-  if (state.status === "out") {
-    return <Link href="/login" className={linkClass}>{t("login")}</Link>;
-  }
+  // Round icon button used on phones
+  const iconButton =
+    "flex size-9 cursor-pointer list-none items-center justify-center rounded-full border text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden";
+  const menuPanel = "absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border bg-background py-1 text-sm shadow-lg";
 
   const close = () => {
     if (menuRef.current) menuRef.current.open = false;
   };
 
+  // Keeps the same space while checking, so the header doesn't jump
+  if (state.status === "loading") {
+    return (
+      <span aria-hidden className="invisible flex items-center">
+        <span className="size-9 sm:hidden" />
+        <span className="hidden rounded-md border px-3 py-1.5 sm:inline-block">{t("loginSignup")}</span>
+      </span>
+    );
+  }
+
+  if (state.status === "out") {
+    return (
+      <>
+        {/* Laptop / tablet: one button; the page has Log in and Sign up tabs */}
+        <Link
+          href="/login"
+          className="hidden items-center gap-2 rounded-md border px-3 py-1.5 font-medium text-foreground hover:border-primary/60 hover:text-primary sm:inline-flex"
+        >
+          <UserRound className="size-4" aria-hidden />
+          {t("loginSignup")}
+        </Link>
+
+        {/* Phone: one account icon that opens Log in / Sign up */}
+        <details ref={menuRef} className="relative sm:hidden">
+          <summary className={iconButton} aria-label={t("account")}>
+            <UserRound className="size-5" aria-hidden />
+          </summary>
+          <div className={menuPanel}>
+            <p className="border-b px-4 py-2 text-xs text-muted-foreground">{t("welcome")}</p>
+            <Link href="/login" onClick={close} className="block px-4 py-2.5 hover:bg-muted">
+              {t("login")}
+            </Link>
+            <Link href="/signup" onClick={close} className="block px-4 py-2.5 font-medium text-primary hover:bg-muted">
+              {t("signup")}
+            </Link>
+          </div>
+        </details>
+      </>
+    );
+  }
+
   return (
     <details ref={menuRef} className="relative">
-      <summary className={`${linkClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
-        {t("account")} <span aria-hidden className="text-xs">▾</span>
+      <summary
+        aria-label={t("account")}
+        className={`${iconButton} sm:size-auto sm:rounded-md sm:border-0 sm:px-3 sm:py-2`}
+      >
+        <UserRound className="size-5 sm:hidden" aria-hidden />
+        <span className="hidden sm:inline">
+          {t("account")} <span aria-hidden className="text-xs">▾</span>
+        </span>
       </summary>
-      <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border bg-background py-1 text-sm shadow-lg">
+      <div className={menuPanel}>
         <p className="border-b px-4 py-2 text-xs text-muted-foreground">
           {t.rich("loggedInAs", { phone: state.phone, b: (c) => <span className="font-medium text-foreground">{c}</span> })}
         </p>

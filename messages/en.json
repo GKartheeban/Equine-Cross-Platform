@@ -26,7 +26,7 @@
   "header": {
     "browseHorses": "Browse horses",
     "sellYourHorse": "Sell your horse",
-    "login": "Login",
+    "login": "Log in",
     "account": "Account",
     "loggedInAs": "Logged in as <b>{phone}</b>",
     "myProfile": "My profile",
@@ -34,7 +34,10 @@
     "savedHorses": "Saved horses",
     "admin": "Admin",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "signup": "Sign up",
+    "welcome": "Welcome to EquineTrade",
+    "loginSignup": "Log in / Sign up"
   },
   "footer": {
     "tagline": "Buy and sell horses across Tamil Nadu",
@@ -257,8 +260,8 @@
     "browse": "Browse horses"
   },
   "login": {
-    "title": "Login or sign up",
-    "intro": "Use your mobile number. We'll send you a one-time code by SMS.",
+    "title": "Log in",
+    "intro": "Welcome back. Enter your mobile number and we'll send you a one-time code.",
     "mobile": "Mobile number",
     "sendCode": "Send code",
     "sending": "Sending code…",
@@ -275,7 +278,21 @@
     "errWrongCode": "That code is wrong or has expired. Try again or resend the code.",
     "errTooMany": "Too many attempts. Please wait a minute and try again.",
     "errNotSetUp": "Phone login isn't switched on yet. Please try again later.",
-    "errGeneric": "Something went wrong. Please try again."
+    "errGeneric": "Something went wrong. Please try again.",
+    "signupTitle": "Create your account",
+    "signupIntro": "Sign up free with your mobile number. It takes under a minute.",
+    "name": "Your name",
+    "namePlaceholder": "e.g. Murugan S.",
+    "nameHint": "Shown to buyers on your listings. Tamil or English.",
+    "errName": "Enter your name.",
+    "errNoAccount": "No account with this number yet. <signup>Sign up instead</signup>.",
+    "verifySignup": "Verify and create account",
+    "tabLogin": "Log in",
+    "tabSignup": "Sign up",
+    "newHere": "New to EquineTrade?",
+    "signupLink": "Sign up",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Log in"
   },
   "sell": {
     "newTitle": "Post your horse",
