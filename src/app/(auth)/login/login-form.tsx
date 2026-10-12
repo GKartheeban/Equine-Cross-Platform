@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { IS_LIVE } from "@/lib/site";
 import { RecoveryCodeCard } from "@/components/recovery-code-card";
 import { GoogleButton } from "@/components/google-button";
 
@@ -33,6 +34,8 @@ export function LoginForm({ next, mode }: { next: string; mode: "login" | "signu
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<"" | ErrorKey>("");
+  // Test version only: Supabase's own error text, to help find setup problems
+  const [detail, setDetail] = useState("");
   // After sign-up: the new recovery code, shown once before continuing
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
 
@@ -42,6 +45,7 @@ export function LoginForm({ next, mode }: { next: string; mode: "login" | "signu
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setDetail("");
     if (mode === "signup" && name.trim().length < 2) return setError("errName");
     if (!/^[6-9]\d{9}$/.test(phone)) return setError("errPhone");
     if (password.length < PASSWORD_MIN) return setError("errPasswordShort");
@@ -56,6 +60,7 @@ export function LoginForm({ next, mode }: { next: string; mode: "login" | "signu
 
     if (error || !data.session || !data.user) {
       setBusy(false);
+      setDetail(error ? `${error.status ?? ""} ${error.message}`.trim() : "No session returned (phone confirmation may still be on)");
       return setError(friendlyError(error?.message ?? "", mode));
     }
 
@@ -207,6 +212,7 @@ export function LoginForm({ next, mode }: { next: string; mode: "login" | "signu
         )}
 
         {errorText && <p role="alert" className="text-sm text-destructive">{errorText}</p>}
+        {!IS_LIVE && detail && <p className="-mt-2 break-words text-xs text-muted-foreground">Supabase: {detail}</p>}
 
         <button type="submit" disabled={busy} className={primaryButton}>
           {busy ? t("checking") : mode === "signup" ? t("createAccount") : t("loginButton")}

@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // Private or personal pages: nothing useful for Google here
-      disallow: ["/admin", "/login", "/signup", "/forgot-password", "/auth", "/account", "/sell", "/saved", "/report"],
+      disallow: ["/admin", "/login", "/signup", "/forgot-password", "/auth", "/account", "/sell", "/saved", "/report", "/api"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

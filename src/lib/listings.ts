@@ -1,77 +1,20 @@
 // Reads listings from Supabase for the public pages (Home, Search, Horse detail).
 // Runs on the server. Only "live" listings are visible here: the database
 // security rules hide everything else from the public.
+//
+// Short caching: each answer from Supabase is kept for 60 seconds and shared by
+// every visitor, so busy pages don't ask Supabase again and again.
+// When a seller posts, edits, sells or deletes a horse (or an admin removes one),
+// the website clears this cache straight away (see /api/refresh-pages), so
+// changes still show up at once. Errors are never kept.
 
+import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { coverOf, mediaUrl, storedMedia, type MediaItem } from "@/lib/media";
-import { trainingFromOld } from "@/lib/horse-options";
+import { LISTING_COLUMNS, toListing, type Listing, type Row } from "@/lib/listing-shape";
 import { breeds, districts } from "@/lib/sample-data";
 
-export type Listing = {
-  id: string;
-  sellerId: string;
-  slug: string;
-  breed: string;
-  gender: string;
-  ageYears: number;
-  heightInches: number;
-  colour: string;
-  markings: string | null;
-  priceInr: number;
-  negotiable: boolean;
-  district: string;
-  town: string;
-  createdAt: string;
-  postedDaysAgo: number;
-  /** All photos and videos, in the seller's order (first photo = cover) */
-  media: MediaItem[];
-  /** Cover photo for cards and sharing (null for video-only listings) */
-  coverUrl: string | null;
-  /** For video-only listings: the first video, shown on the card instead of a photo */
-  coverVideoUrl: string | null;
-  hasVideo: boolean;
-  vaccinated: boolean;
-  vetCertificate: boolean;
-  /** e.g. ["Ridden", "Cart"] */
-  trainingLevels: string[];
-  handlerExperience: string;
-  pregnant: boolean | null;
-  description: string | null;
-  views: number;
-};
+export { LISTING_COLUMNS, toListing, type Listing, type Row } from "@/lib/listing-shape";
 
-export type Row = {
-  id: string;
-  seller_id: string;
-  slug: string;
-  breed: string;
-  gender: string;
-  age_years: number;
-  height_inches: number;
-  colour: string;
-  markings: string | null;
-  price_inr: number;
-  negotiable: boolean;
-  district: string;
-  town: string;
-  created_at: string;
-  media: unknown;
-  photo_paths: Record<string, string> | null;
-  video_path: string | null;
-  video_seconds: number | null;
-  vaccinated: boolean;
-  vet_certificate_path: string | null;
-  training_level: string | null;
-  training_levels: string[] | null;
-  handler_experience: string;
-  pregnant: boolean | null;
-  description: string | null;
-  views: number;
-};
-
-export const LISTING_COLUMNS =
-  // (kept in one place for the server pages and the Saved page)
-  "id, seller_id, slug, breed, gender, age_years, height_inches, colour, markings, price_inr, negotiable, district, town, created_at, media, photo_paths, video_path, video_seconds, vaccinated, vet_certificate_path, training_level, training_levels, handler_experience, pregnant, description, views";
 const COLUMNS = LISTING_COLUMNS;
 
 // A simple public client: no login needed to read live listings
@@ -83,89 +26,85 @@ function db() {
   );
 }
 
-export function toListing(r: Row): Listing {
-  const saved = storedMedia(r);
-  const cover = coverOf(saved);
-  const days = Math.max(0, Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86_400_000));
-  return {
-    id: r.id,
-    sellerId: r.seller_id,
-    slug: r.slug,
-    breed: r.breed,
-    gender: r.gender,
-    ageYears: r.age_years,
-    heightInches: r.height_inches,
-    colour: r.colour,
-    markings: r.markings,
-    priceInr: r.price_inr,
-    negotiable: r.negotiable,
-    district: r.district,
-    town: r.town,
-    createdAt: r.created_at,
-    postedDaysAgo: days,
-    media: saved.map((m) => ({ type: m.type, url: mediaUrl(m.path), seconds: m.seconds })),
-    coverUrl: cover?.type === "photo" ? cover.url : null,
-    coverVideoUrl: cover?.type === "video" ? cover.url : null,
-    hasVideo: saved.some((m) => m.type === "video"),
-    vaccinated: r.vaccinated,
-    vetCertificate: !!r.vet_certificate_path,
-    trainingLevels: r.training_levels?.length ? r.training_levels : trainingFromOld(r.training_level),
-    handlerExperience: r.handler_experience,
-    pregnant: r.pregnant,
-    description: r.description,
-    views: r.views,
-  };
+/** Cache label used for all public listing data (cleared by /api/refresh-pages). */
+export const PUBLIC_CACHE_TAG = "public-listings";
+const CACHE_SECONDS = 60;
+
+/** Keeps a Supabase read for 60 seconds. Errors are thrown so they are not kept. */
+function cached<A extends unknown[], R>(name: string, fn: (...args: A) => Promise<R>) {
+  return unstable_cache(fn, [name], { revalidate: CACHE_SECONDS, tags: [PUBLIC_CACHE_TAG] });
 }
 
-/** Newest live listings, for the Home page. */
-export async function getLatestListings(limit = 6): Promise<Listing[]> {
+/** Runs a cached read; if Supabase fails, logs it and shows the fallback instead. */
+async function safely<R>(name: string, read: () => Promise<R>, fallback: R): Promise<R> {
+  try {
+    return await read();
+  } catch (e) {
+    console.error(`${name}:`, e instanceof Error ? e.message : e);
+    return fallback;
+  }
+}
+
+const latestCached = cached("latest-listings", async (limit: number) => {
   const { data, error } = await db()
     .from("listings")
     .select(COLUMNS)
     .eq("status", "live")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) {
-    console.error("getLatestListings:", error.message);
-    return [];
-  }
+  if (error) throw new Error(error.message);
   return (data as unknown as Row[]).map(toListing);
+});
+
+/** Newest live listings, for the Home page. */
+export function getLatestListings(limit = 6): Promise<Listing[]> {
+  return safely("getLatestListings", () => latestCached(limit), []);
 }
 
-/** One live listing by its web address slug, for the Horse detail page. */
-export async function getListingBySlug(slug: string): Promise<Listing | null> {
+const bySlugCached = cached("listing-by-slug", async (slug: string) => {
   const { data, error } = await db()
     .from("listings")
     .select(COLUMNS)
     .eq("slug", slug)
     .eq("status", "live")
     .maybeSingle();
-  if (error) console.error("getListingBySlug:", error.message);
+  if (error) throw new Error(error.message);
   return data ? toListing(data as unknown as Row) : null;
+});
+
+/** One live listing by its web address slug, for the Horse detail page. */
+export function getListingBySlug(slug: string): Promise<Listing | null> {
+  return safely("getListingBySlug", () => bySlugCached(slug), null);
 }
 
-/** Other live horses, same breed first, for "Similar horses". */
-export async function getSimilarListings(listing: Listing, limit = 3): Promise<Listing[]> {
+const similarCached = cached("similar-listings", async (id: string, breed: string, limit: number) => {
   const sameBreed = await db()
     .from("listings")
     .select(COLUMNS)
     .eq("status", "live")
-    .eq("breed", listing.breed)
-    .neq("id", listing.id)
+    .eq("breed", breed)
+    .neq("id", id)
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (sameBreed.error) throw new Error(sameBreed.error.message);
   const rows = (sameBreed.data as unknown as Row[] | null) ?? [];
   if (rows.length < limit) {
     const others = await db()
       .from("listings")
       .select(COLUMNS)
       .eq("status", "live")
-      .neq("breed", listing.breed)
+      .neq("breed", breed)
       .order("created_at", { ascending: false })
       .limit(limit - rows.length);
+    if (others.error) throw new Error(others.error.message);
     rows.push(...((others.data as unknown as Row[] | null) ?? []));
   }
   return rows.map(toListing);
+});
+
+/** Other live horses, same breed first, for "Similar horses". */
+export function getSimilarListings(listing: Listing, limit = 3): Promise<Listing[]> {
+  return safely("getSimilarListings", () => similarCached(listing.id, listing.breed, limit), []);
 }
 
 export type SearchFilters = {
@@ -176,8 +115,7 @@ export type SearchFilters = {
   sort: string; // "newest" | "price-asc" | "price-desc"
 };
 
-/** Live listings matching the search filters, for the Search page. */
-export async function searchListings(f: SearchFilters, limit = 60): Promise<Listing[]> {
+const searchCached = cached("search-listings", async (f: SearchFilters, limit: number) => {
   let q = db().from("listings").select(COLUMNS).eq("status", "live");
 
   const breedName = breeds.find((b) => b.slug === f.breed)?.name;
@@ -196,23 +134,28 @@ export async function searchListings(f: SearchFilters, limit = 60): Promise<List
   else q = q.order("created_at", { ascending: false });
 
   const { data, error } = await q.limit(limit);
-  if (error) {
-    console.error("searchListings:", error.message);
-    return [];
-  }
+  if (error) throw new Error(error.message);
   return (data as unknown as Row[]).map(toListing);
+});
+
+/** Live listings matching the search filters, for the Search page. */
+export function searchListings(f: SearchFilters, limit = 60): Promise<Listing[]> {
+  // Same filters in the same order -> same cache entry
+  const key: SearchFilters = { breed: f.breed, district: f.district, price: f.price, gender: f.gender, sort: f.sort };
+  return safely("searchListings", () => searchCached(key, limit), []);
 }
 
-/** Number of live horses in each district (district name -> count). */
-export async function getDistrictCounts(): Promise<Record<string, number>> {
+const districtCountsCached = cached("district-counts", async () => {
   const { data, error } = await db().from("live_district_counts").select("district, horses");
-  if (error) {
-    console.error("getDistrictCounts:", error.message);
-    return {};
-  }
+  if (error) throw new Error(error.message);
   return Object.fromEntries(
     ((data as unknown as { district: string; horses: number }[]) ?? []).map((r) => [r.district, r.horses]),
-  );
+  ) as Record<string, number>;
+});
+
+/** Number of live horses in each district (district name -> count). */
+export function getDistrictCounts(): Promise<Record<string, number>> {
+  return safely("getDistrictCounts", () => districtCountsCached(), {});
 }
 
 export type SellerProfile = {
@@ -222,13 +165,13 @@ export type SellerProfile = {
   nameChangedAt: string | null; // ISO date of the last name change (null if never changed)
 };
 
-/** The seller's public profile: name, photo, member-since and last name change. */
-export async function getSellerProfile(sellerId: string): Promise<SellerProfile> {
-  const { data } = await db()
+const sellerCached = cached("seller-profile", async (sellerId: string): Promise<SellerProfile> => {
+  const { data, error } = await db()
     .from("profiles")
     .select("full_name, avatar_path, created_at, name_changed_at")
     .eq("id", sellerId)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   const p = data as {
     full_name: string | null;
     avatar_path: string | null;
@@ -243,22 +186,33 @@ export async function getSellerProfile(sellerId: string): Promise<SellerProfile>
     memberSince: p?.created_at ?? null,
     nameChangedAt: p?.name_changed_at ?? null,
   };
+});
+
+/** The seller's public profile: name, photo, member-since and last name change. */
+export function getSellerProfile(sellerId: string): Promise<SellerProfile> {
+  return safely("getSellerProfile", () => sellerCached(sellerId), {
+    name: null,
+    avatarUrl: null,
+    memberSince: null,
+    nameChangedAt: null,
+  });
 }
 
-/** Every live horse's address and last change, for the Google sitemap. */
-export async function getLiveListingSlugs(): Promise<{ slug: string; updatedAt: string }[]> {
+const slugsCached = cached("live-slugs", async () => {
   const { data, error } = await db()
     .from("listings")
     .select("slug, updated_at")
     .eq("status", "live")
     .order("updated_at", { ascending: false })
     .limit(5000);
-  if (error) {
-    console.error("getLiveListingSlugs:", error.message);
-    return [];
-  }
+  if (error) throw new Error(error.message);
   return ((data as unknown as { slug: string; updated_at: string }[]) ?? []).map((r) => ({
     slug: r.slug,
     updatedAt: r.updated_at,
   }));
+});
+
+/** Every live horse's address and last change, for the Google sitemap. */
+export function getLiveListingSlugs(): Promise<{ slug: string; updatedAt: string }[]> {
+  return safely("getLiveListingSlugs", () => slugsCached(), []);
 }

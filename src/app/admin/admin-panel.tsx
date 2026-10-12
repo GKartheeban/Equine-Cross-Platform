@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { refreshPublicPages } from "@/lib/refresh-pages";
 import { formatInr } from "@/lib/sample-data";
 import { coverOf, storedMedia } from "@/lib/media";
 import { Dashboard } from "./dashboard";
@@ -136,6 +137,7 @@ export function AdminPanel() {
     setMessage("");
     // Done in the database, which also records who did it
     const { error } = await createClient().rpc("mod_set_listing_status", { p_listing_id: listing.id, p_status: status });
+    if (!error) await refreshPublicPages();
     setBusy(null);
     setMessage(error ? "Couldn't update the listing." : status === "removed" ? "Listing removed." : "Listing restored.");
     load();

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ListingCard } from "@/components/listing-card";
 import { createClient } from "@/lib/supabase/client";
-import { LISTING_COLUMNS, toListing, type Listing, type Row } from "@/lib/listings";
+import { LISTING_COLUMNS, toListing, type Listing, type Row } from "@/lib/listing-shape";
 
 type SavedItem = { listingId: string; listing: Listing | null };
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { refreshPublicPages } from "@/lib/refresh-pages";
 import { formatInr } from "@/lib/sample-data";
 import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
 import { coverOf, storedMedia } from "@/lib/media";
@@ -75,6 +76,7 @@ export function MyListings() {
     const { error } = await createClient().from("listings").update({ status }).eq("id", listing.id);
     setBusyId(null);
     if (error) return setError(t("errUpdate"));
+    void refreshPublicPages();
     setListings((all) => all?.map((l) => (l.id === listing.id ? { ...l, status } : l)) ?? null);
   }
 
@@ -87,6 +89,7 @@ export function MyListings() {
       setBusyId(null);
       return setError(t("errDelete"));
     }
+    void refreshPublicPages();
     // Also delete its photos, video and certificate from storage
     const media = storedMedia(listing).map((m) => m.path);
     if (media.length) await supabase.storage.from("listing-media").remove(media);

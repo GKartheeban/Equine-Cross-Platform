@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { refreshPublicPages } from "@/lib/refresh-pages";
 import type { MediaKind } from "@/lib/horse-options";
 import { storedMedia, type StoredMedia } from "@/lib/media";
 import { AppError, type ProgressFn } from "@/lib/app-error";
@@ -149,6 +150,7 @@ export async function submitListing(
     });
     if (error) throw saveError(error.message);
 
+    await refreshPublicPages(); // show the new horse on Home/Search at once
     return slug;
   } catch (err) {
     // Clean up files from a failed attempt so they don't use storage
@@ -323,5 +325,6 @@ export async function updateListing(
     if (paths.length) await supabase.storage.from(bucket).remove(paths).catch(() => {});
   }
 
+  await refreshPublicPages(); // show the changes at once
   return current.slug as string;
 }

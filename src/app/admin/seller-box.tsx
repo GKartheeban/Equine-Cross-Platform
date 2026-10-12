@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { refreshPublicPages } from "@/lib/refresh-pages";
 
 export type SellerInfo = {
   id: string;
@@ -28,6 +29,7 @@ export function SellerBox({ seller, onChanged }: { seller: SellerInfo; onChanged
     setBusy(true);
     const supabase = createClient();
     const { data: oldPath, error } = await supabase.rpc("mod_clear_profile", { p_user_id: seller.id, p_what: what });
+    if (!error) void refreshPublicPages();
     if (!error && typeof oldPath === "string" && oldPath) {
       await supabase.storage.from("avatars").remove([oldPath]);
     }

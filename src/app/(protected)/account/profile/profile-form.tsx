@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { setLanguageCookie } from "@/components/language-switch";
 import { dateLocale } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/client";
+import { refreshPublicPages } from "@/lib/refresh-pages";
 import { districts } from "@/lib/sample-data";
 import { AccountSecurity } from "./account-security";
 
@@ -81,6 +82,7 @@ export function ProfileForm() {
       return;
     }
     if (name.trim() !== savedName && savedName) setNameChangedAt(new Date().toISOString());
+    if (name.trim() !== savedName) void refreshPublicPages(); // seller name on horse pages
     setSavedName(name.trim());
     setMessage({ ok: true, text: t("saved") });
     // Switch the whole site to the chosen language
@@ -108,6 +110,7 @@ export function ProfileForm() {
       if (saveErr) throw saveErr;
       if (avatarPath) await supabase.storage.from("avatars").remove([avatarPath]);
       setAvatarPath(path);
+      void refreshPublicPages();
     } catch {
       setAvatarError(t("errPhotoUpload"));
     } finally {
@@ -123,6 +126,7 @@ export function ProfileForm() {
     if (!error) {
       await supabase.storage.from("avatars").remove([avatarPath]);
       setAvatarPath(null);
+      void refreshPublicPages();
     }
     setAvatarBusy(false);
   }
