@@ -16,8 +16,8 @@ if (!BASE) throw new Error("Set the site address: k6 run -e BASE_URL=https://you
 export const options = {
   stages: [
     { duration: "30s", target: 5 },  // warm up to 5 visitors
-    { duration: "1m", target: 20 },  // rise to 20 visitors at the same time
-    { duration: "1m", target: 20 },  // hold
+    { duration: "1m", target: 50 },  // rise to 20 visitors at the same time
+    { duration: "1m", target: 50 },  // hold
     { duration: "30s", target: 0 },  // calm down
   ],
   thresholds: {
