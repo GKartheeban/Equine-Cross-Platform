@@ -9,6 +9,7 @@ import { Dashboard } from "./dashboard";
 import { SellerBox, type SellerInfo } from "./seller-box";
 import { Team } from "./team";
 import { ActivityLog } from "./activity-log";
+import { ResetPassword } from "./reset-password";
 
 type ListingInfo = {
   id: string;
@@ -45,7 +46,7 @@ const thumbOf = (l: ListingInfo) => coverOf(storedMedia(l));
 const dateText = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-type Tab = "dashboard" | "reports" | "recent" | "team" | "log";
+type Tab = "dashboard" | "reports" | "recent" | "team" | "log" | "passwords";
 
 export function AdminPanel() {
   const [access, setAccess] = useState<"checking" | "denied" | "ok">("checking");
@@ -199,6 +200,8 @@ export function AdminPanel() {
                   ["log", "Action log"],
                 ] as const)
               : []),
+            // Password resets are an L2 job
+            ...(level === 2 ? ([["passwords", "Password reset"]] as const) : []),
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -219,6 +222,7 @@ export function AdminPanel() {
       {tab === "dashboard" && <Dashboard />}
       {tab === "team" && level === 1 && <Team />}
       {tab === "log" && level === 1 && <ActivityLog />}
+      {tab === "passwords" && level === 2 && <ResetPassword />}
 
       {tab === "reports" && (
         <ul className="mt-4 grid gap-3">

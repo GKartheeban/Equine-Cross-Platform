@@ -24,6 +24,7 @@ const actionLabel: Record<string, string> = {
   add_admin: "Added admin",
   change_level: "Changed admin level",
   remove_admin: "Removed admin",
+  reset_password: "Reset a user's password",
 };
 
 const phoneText = (p: string | null) => {

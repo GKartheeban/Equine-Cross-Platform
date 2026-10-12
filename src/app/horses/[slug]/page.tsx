@@ -277,10 +277,9 @@ function SellerInfo({ horse, seller, t, locale }: { horse: Listing; seller: Sell
         </div>
         <div className="min-w-0 text-sm">
           <p className="truncate font-medium">{seller.name ?? t("verifiedSeller")}</p>
-          <p className="text-muted-foreground">
-            {t("mobileVerified")}
-            {seller.memberSince ? ` · ${t("memberSince", { date: fmt(seller.memberSince, false) })}` : ""}
-          </p>
+          {seller.memberSince && (
+            <p className="text-muted-foreground">{t("memberSince", { date: fmt(seller.memberSince, false) })}</p>
+          )}
         </div>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">{t("listed", { date: fmt(horse.createdAt) })}</p>

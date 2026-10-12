@@ -78,7 +78,7 @@ export function Team() {
         <h3 className="font-semibold">Admin levels</h3>
         <ul className="mt-2 grid gap-1 text-muted-foreground">
           <li><span className="font-medium text-foreground">L1 · Owner:</span> everything, including this Team page, the action log and the full dashboard.</li>
-          <li><span className="font-medium text-foreground">L2 · Moderator:</span> handles reports and seller profiles, sees a smaller dashboard. Can&apos;t see who the admins are.</li>
+          <li><span className="font-medium text-foreground">L2 · Moderator:</span> handles reports, seller profiles and password resets, sees a smaller dashboard. Can&apos;t see who the admins are.</li>
         </ul>
       </section>
 

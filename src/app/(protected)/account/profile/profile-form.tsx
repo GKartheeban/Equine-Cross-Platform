@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
@@ -8,6 +9,7 @@ import { setLanguageCookie } from "@/components/language-switch";
 import { dateLocale } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/client";
 import { districts } from "@/lib/sample-data";
+import { AccountSecurity } from "./account-security";
 
 const inputClass =
   "h-12 w-full rounded-lg border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -185,7 +187,7 @@ export function ProfileForm() {
         <div className="grid gap-1.5">
           <span className="text-sm font-medium">{t("mobile")}</span>
           <p className="flex h-12 items-center rounded-lg border bg-muted px-3 text-base text-muted-foreground">
-            {phone || t("verified")}
+            {phone || "—"}
           </p>
           <p className="text-xs text-muted-foreground">
             {t("mobileHint")}
@@ -266,10 +268,19 @@ export function ProfileForm() {
         </button>
       </form>
 
+      <AccountSecurity />
+
+      <Link
+        href="/account/password"
+        className="mt-8 flex h-12 w-full items-center justify-center rounded-lg border text-sm font-medium hover:bg-muted"
+      >
+        {t("changePassword")}
+      </Link>
+
       <button
         type="button"
         onClick={logout}
-        className="mt-8 w-full rounded-lg border px-4 py-3 text-sm text-destructive hover:bg-muted"
+        className="mt-3 w-full rounded-lg border px-4 py-3 text-sm text-destructive hover:bg-muted"
       >
         {t("logout")}
       </button>
