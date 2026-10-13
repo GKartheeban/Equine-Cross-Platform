@@ -1,0 +1,110 @@
+# EquineTrade: nightly database backup.
+#
+# Every night at about 2:00 AM (India time), and whenever an admin presses
+# "Run workflow" on GitHub, this saves a FULL copy of the database:
+#   - every table in the "public" schema (listings, profiles, reports, logs...)
+#     with their structure, security rules and functions
+#   - the login accounts (auth.users and auth.identities)
+# Photos and videos are NOT included (they live in Supabase Storage).
+#
+# The copy is locked with a password (AES-256) before it leaves the runner,
+# and GitHub keeps each copy for 30 days, then deletes it automatically.
+#
+# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL   the "Session pooler" connection string from Supabase
+#   BACKUP_PASSWORD   any long password; you need it to open a backup
+# How to restore: see supabase/BACKUPS.md
+
+name: Database backup
+
+on:
+  schedule:
+    - cron: "37 20 * * *" # 20:37 UTC = 02:07 India time
+  workflow_dispatch: # the "Run workflow" button
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check the secrets are set
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$BACKUP_PASSWORD" ]; then
+            echo "::error::Add the SUPABASE_DB_URL and BACKUP_PASSWORD secrets first (see supabase/BACKUPS.md)."
+            exit 1
+          fi
+
+      - name: Install PostgreSQL 17 tools
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Save the database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          PG=/usr/lib/postgresql/17/bin
+          STAMP=$(TZ=Asia/Kolkata date +%Y-%m-%d_%H%M)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          mkdir -p backup
+
+          # 1. All website tables: structure, security rules, functions and data
+          "$PG/pg_dump" "$DB_URL" --schema=public --no-owner --no-privileges \
+            --format=custom --file=backup/public.dump
+
+          # 2. Login accounts (data only; Supabase creates these tables itself)
+          "$PG/pg_dump" "$DB_URL" --data-only --table=auth.users --table=auth.identities \
+            --format=custom --file=backup/auth.dump
+
+          # 3. Make sure both files are readable and not empty
+          for f in backup/public.dump backup/auth.dump; do
+            "$PG/pg_restore" --list "$f" > /dev/null
+            test -s "$f"
+          done
+          "$PG/pg_restore" --list backup/public.dump > contents.txt
+          grep -q "TABLE DATA public listings" contents.txt
+          rm contents.txt
+
+          cat > backup/README.txt <<TXT
+          EquineTrade database backup, made $STAMP (India time).
+          public.dump = website tables, auth.dump = login accounts.
+          How to restore: see supabase/BACKUPS.md in the code.
+          TXT
+          ls -l backup
+
+      - name: Lock it with the backup password
+        env:
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          tar -czf "equinetrade-db-$STAMP.tar.gz" -C backup .
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 \
+            --output "equinetrade-db-$STAMP.tar.gz.gpg" "equinetrade-db-$STAMP.tar.gz" <<< "$BACKUP_PASSWORD"
+          rm -rf backup "equinetrade-db-$STAMP.tar.gz"
+          ls -l "equinetrade-db-$STAMP.tar.gz.gpg"
+
+      - name: Keep it for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: equinetrade-db-${{ env.STAMP }}
+          path: equinetrade-db-${{ env.STAMP }}.tar.gz.gpg
+          retention-days: 30
+          compression-level: 0 # already compressed
+          if-no-files-found: error
