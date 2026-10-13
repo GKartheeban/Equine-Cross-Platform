@@ -257,7 +257,7 @@ const en: LegalDocument = {
             },
             {
               n: "10.2",
-              text: "You may stop using the Website at any time, delete your Listings, and ask us to delete your account.",
+              text: "You may stop using the Website at any time, and delete your Listings or your whole account yourself from My profile.",
             },
             {
               n: "10.3",
@@ -657,7 +657,7 @@ const ta: LegalDocument = {
             },
             {
               n: "10.2",
-              text: "நீங்கள் எப்போது வேண்டுமானாலும் இணையதளத்தைப் பயன்படுத்துவதை நிறுத்தலாம், உங்கள் பதிவுகளை நீக்கலாம், உங்கள் கணக்கை நீக்குமாறு எங்களிடம் கேட்கலாம்.",
+              text: "நீங்கள் எப்போது வேண்டுமானாலும் இணையதளத்தைப் பயன்படுத்துவதை நிறுத்தலாம்; உங்கள் பதிவுகளையோ முழுக் கணக்கையோ “என் சுயவிவரம்” பக்கத்திலிருந்து நீங்களே நீக்கலாம்.",
             },
             {
               n: "10.3",

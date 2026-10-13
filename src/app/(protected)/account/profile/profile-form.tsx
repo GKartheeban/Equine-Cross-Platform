@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { refreshPublicPages } from "@/lib/refresh-pages";
 import { districts } from "@/lib/sample-data";
 import { AccountSecurity } from "./account-security";
+import { DeleteAccount } from "./delete-account";
 
 const inputClass =
   "h-12 w-full rounded-lg border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -288,6 +289,8 @@ export function ProfileForm() {
       >
         {t("logout")}
       </button>
+
+      <DeleteAccount />
     </div>
   );
 }

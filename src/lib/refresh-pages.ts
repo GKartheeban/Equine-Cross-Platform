@@ -18,3 +18,17 @@ export async function refreshPublicPages(): Promise<void> {
     // ignore: the cache runs out by itself within 60 seconds
   }
 }
+
+/** After an account is deleted there is no login any more, so the deletion ID is used instead. */
+export async function refreshAfterDeletion(deletionId: string): Promise<void> {
+  try {
+    await fetch("/api/refresh-pages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deletionId }),
+      keepalive: true,
+    });
+  } catch {
+    // ignore
+  }
+}

@@ -11,6 +11,7 @@ import { SellerBox, type SellerInfo } from "./seller-box";
 import { Team } from "./team";
 import { ActivityLog } from "./activity-log";
 import { ResetPassword } from "./reset-password";
+import { Deletions } from "./deletions";
 
 type ListingInfo = {
   id: string;
@@ -47,7 +48,7 @@ const thumbOf = (l: ListingInfo) => coverOf(storedMedia(l));
 const dateText = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-type Tab = "dashboard" | "reports" | "recent" | "team" | "log" | "passwords";
+type Tab = "dashboard" | "reports" | "recent" | "team" | "log" | "deletions" | "passwords";
 
 export function AdminPanel() {
   const [access, setAccess] = useState<"checking" | "denied" | "ok">("checking");
@@ -200,6 +201,7 @@ export function AdminPanel() {
               ? ([
                   ["team", "Team"],
                   ["log", "Action log"],
+                  ["deletions", "Deleted accounts"],
                 ] as const)
               : []),
             // Password resets are an L2 job
@@ -224,6 +226,7 @@ export function AdminPanel() {
       {tab === "dashboard" && <Dashboard />}
       {tab === "team" && level === 1 && <Team />}
       {tab === "log" && level === 1 && <ActivityLog />}
+      {tab === "deletions" && level === 1 && <Deletions />}
       {tab === "passwords" && level === 2 && <ResetPassword />}
 
       {tab === "reports" && (

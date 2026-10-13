@@ -195,7 +195,7 @@ const en: LegalDocument = {
           ],
         },
         {
-          p: "If you ask us to delete your account, we will delete or anonymise your personal data within 30 days, except for information we must keep by law or to resolve a dispute.",
+          p: "You can delete your account yourself at any time from My profile. Your account, listings, photos, videos and personal details are then deleted straight away. We keep only a short record of the deletion: its date and your mobile number in a masked form (for example, +91 98XXXXXX10) together with a scrambled (hashed) copy that helps us prevent repeated misuse. If you ask us to delete your account instead, we will do so within 30 days. In both cases, we keep only information that we must retain by law or to resolve a dispute.",
         },
       ],
     },
@@ -229,10 +229,10 @@ const en: LegalDocument = {
               label: "Correction:",
               text: "update your name, photo, district and listings yourself on your profile and listing pages, or ask us to correct anything else.",
             },
-            { label: "Deletion:", text: "delete your listings yourself at any time, and ask us to delete your account." },
+            { label: "Deletion:", text: "delete your listings, or your whole account, yourself at any time from My profile, or ask us to do it for you." },
             {
               label: "Withdraw consent:",
-              text: "stop using the website and ask us to delete your account at any time. This does not affect anything done before you withdrew consent.",
+              text: "stop using the website and delete your account at any time. This does not affect anything done before you withdrew consent.",
             },
             { label: "Complain:", text: "raise a grievance with our Grievance Officer (see section 13)." },
             {
@@ -491,7 +491,7 @@ const ta: LegalDocument = {
           ],
         },
         {
-          p: "உங்கள் கணக்கை நீக்குமாறு நீங்கள் கேட்டால், சட்டப்படி வைத்திருக்க வேண்டிய அல்லது ஒரு சர்ச்சையைத் தீர்க்கத் தேவைப்படும் தகவல்களைத் தவிர, உங்கள் தனிப்பட்ட தரவை 30 நாட்களுக்குள் நீக்குவோம் அல்லது அடையாளம் காண முடியாதபடி மாற்றுவோம்.",
+          p: "“என் சுயவிவரம்” பக்கத்திலிருந்து உங்கள் கணக்கை எப்போது வேண்டுமானாலும் நீங்களே நீக்கலாம். அப்போது உங்கள் கணக்கு, பதிவுகள், புகைப்படங்கள், வீடியோக்கள், தனிப்பட்ட விவரங்கள் அனைத்தும் உடனடியாக நீக்கப்படும். நீக்கம் பற்றிய ஒரு சிறு பதிவை மட்டுமே வைத்திருப்போம்: அதன் தேதி, மறைக்கப்பட்ட வடிவில் உங்கள் மொபைல் எண் (உதாரணமாக, +91 98XXXXXX10), மீண்டும் மீண்டும் நிகழும் தவறான பயன்பாட்டைத் தடுக்க உதவும் அதன் மாற்றியமைக்கப்பட்ட (hash செய்யப்பட்ட) வடிவம். உங்கள் கணக்கை நீக்குமாறு எங்களிடம் கேட்டால், 30 நாட்களுக்குள் நீக்குவோம். இரண்டு நிலைகளிலும், சட்டப்படி வைத்திருக்க வேண்டிய அல்லது ஒரு சர்ச்சையைத் தீர்க்கத் தேவைப்படும் தகவல்களை மட்டுமே வைத்திருப்போம்.",
         },
       ],
     },
@@ -530,11 +530,11 @@ const ta: LegalDocument = {
             },
             {
               label: "நீக்குதல்:",
-              text: "உங்கள் பதிவுகளை எப்போது வேண்டுமானாலும் நீங்களே நீக்கலாம்; உங்கள் கணக்கை நீக்குமாறும் எங்களிடம் கேட்கலாம்.",
+              text: "உங்கள் பதிவுகளையோ முழுக் கணக்கையோ “என் சுயவிவரம்” பக்கத்திலிருந்து எப்போது வேண்டுமானாலும் நீங்களே நீக்கலாம்; அல்லது அதைச் செய்யுமாறு எங்களிடம் கேட்கலாம்.",
             },
             {
               label: "ஒப்புதலைத் திரும்பப் பெறுதல்:",
-              text: "எப்போது வேண்டுமானாலும் இணையதளத்தைப் பயன்படுத்துவதை நிறுத்தி, உங்கள் கணக்கை நீக்குமாறு கேட்கலாம். ஒப்புதலைத் திரும்பப் பெறுவதற்கு முன் நடந்தவற்றை இது பாதிக்காது.",
+              text: "எப்போது வேண்டுமானாலும் இணையதளத்தைப் பயன்படுத்துவதை நிறுத்தி, உங்கள் கணக்கை நீக்கலாம். ஒப்புதலைத் திரும்பப் பெறுவதற்கு முன் நடந்தவற்றை இது பாதிக்காது.",
             },
             { label: "புகார் அளித்தல்:", text: "எங்கள் குறைதீர்ப்பு அலுவலரிடம் புகார் அளிக்கலாம் (பிரிவு 13-ஐப் பார்க்கவும்)." },
             {

@@ -615,5 +615,41 @@
     "googleNotYet": "Link Google so you can log in with it if you forget your password.",
     "googleLink": "Link Google account",
     "googleUnlink": "Unlink Google"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "intro": "Permanently delete your account and everything in it.",
+    "open": "Delete my account",
+    "warningTitle": "This will permanently delete:",
+    "what1": "all your listings, with their photos, videos and vet certificates",
+    "what2": "your name, profile photo, district and language",
+    "what3": "your saved horses and the reports you have made",
+    "what4": "your login, recovery code and linked Google account",
+    "cannotUndo": "Buyers will no longer see your horses. This can't be undone.",
+    "reasonLabel": "Why are you leaving? (optional)",
+    "reasonNone": "Prefer not to say",
+    "reasons": {
+      "sold": "I sold my horse",
+      "not_useful": "The website wasn't useful",
+      "too_many_calls": "Too many calls or messages",
+      "privacy": "Privacy concerns",
+      "other": "Another reason"
+    },
+    "passwordLabel": "Type your password to confirm",
+    "passwordHint": "Forgot it? Use \"Change password\" above to set a new one first.",
+    "cancel": "Cancel",
+    "confirm": "Delete permanently",
+    "step": {
+      "checking": "Checking…",
+      "files": "Deleting files…",
+      "account": "Deleting account…"
+    },
+    "errPassword": "Wrong password. Please try again.",
+    "errSession": "Your login has expired. Please log in again.",
+    "errAdmin": "Admin accounts can't be deleted here. Ask an L1 admin to remove you from the team first.",
+    "errGeneric": "Couldn't finish deleting your account. Please try again.",
+    "doneTitle": "Your account has been deleted",
+    "doneText": "Your listings, photos, videos and personal details have been removed. Thank you for using EquineTrade.",
+    "goHome": "Go to home page"
   }
 }
