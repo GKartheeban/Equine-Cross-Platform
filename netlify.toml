@@ -1,0 +1,11 @@
+# Netlify settings for HorseMart.
+# Build settings (build command, publish folder) stay in the Netlify dashboard.
+
+# The old address equine-trade.netlify.app always keeps working on Netlify.
+# Send every visitor (and Google) from it to the real address, keeping the same page:
+#   https://equine-trade.netlify.app/horses/abc  ->  https://horsemart.in/horses/abc
+[[redirects]]
+  from = "https://equine-trade.netlify.app/*"
+  to = "https://horsemart.in/:splat"
+  status = 301
+  force = true
