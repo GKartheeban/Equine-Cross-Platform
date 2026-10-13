@@ -41,8 +41,8 @@
   },
   "footer": {
     "tagline": "Buy and sell horses across Tamil Nadu",
-    "privacy": "Privacy policy",
-    "terms": "Terms of use"
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use"
   },
   "home": {
     "title": "Find the right horse in Tamil Nadu",
@@ -267,7 +267,7 @@
     "intro": "Welcome back. Log in with your mobile number and password.",
     "mobile": "Mobile number",
     "checking": "Please wait…",
-    "agree": "By continuing, you agree to our <terms>Terms of use</terms> and <privacy>Privacy policy</privacy>.",
+    "agree": "By continuing, you agree to our <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>.",
     "errPhone": "Enter a valid 10-digit Indian mobile number.",
     "errTooMany": "Too many attempts. Please wait a minute and try again.",
     "errNotSetUp": "Sign-up isn't switched on yet. Please try again later.",
