@@ -1,6 +1,6 @@
 {
   "meta": {
-    "siteTitle": "EquineTrade – Horses for sale in Tamil Nadu",
+    "siteTitle": "HorseMart – Horses for sale in Tamil Nadu",
     "siteDescription": "Buy and sell horses across Tamil Nadu. Every listing with photos or videos, price and location. Call or WhatsApp sellers before you travel."
   },
   "common": {
@@ -36,7 +36,7 @@
     "logout": "Logout",
     "language": "Language",
     "signup": "Sign up",
-    "welcome": "Welcome to EquineTrade",
+    "welcome": "Welcome to HorseMart",
     "loginSignup": "Log in / Sign up"
   },
   "footer": {
@@ -163,7 +163,7 @@
     "call": "Call",
     "callNumber": "Call {number}",
     "whatsapp": "WhatsApp",
-    "whatsappMessage": "Hi, I saw your {title} on EquineTrade: {url} Is it still available?"
+    "whatsappMessage": "Hi, I saw your {title} on HorseMart: {url} Is it still available?"
   },
   "save": {
     "save": "Save",
@@ -281,7 +281,7 @@
     "errNoAccount": "No account with this number yet. <signup>Sign up instead</signup>.",
     "tabLogin": "Log in",
     "tabSignup": "Sign up",
-    "newHere": "New to EquineTrade?",
+    "newHere": "New to HorseMart?",
     "signupLink": "Sign up",
     "haveAccount": "Already have an account?",
     "loginLink": "Log in",
@@ -449,7 +449,7 @@
     "intro": "Change anything below, then tap Save changes on the last step.",
     "loading": "Loading your listing…",
     "notFound": "This listing wasn't found in your account.",
-    "removed": "This listing was removed by EquineTrade and can't be edited.",
+    "removed": "This listing was removed by HorseMart and can't be edited.",
     "backToMyListings": "Back to My listings"
   },
   "myListings": {
@@ -470,7 +470,7 @@
       "removed": "Removed"
     },
     "posted": "Posted {date}",
-    "removedNote": "This listing was removed by EquineTrade for breaking the listing rules.",
+    "removedNote": "This listing was removed by HorseMart for breaking the listing rules.",
     "confirmDelete": "Delete this listing and its photos? This can't be undone.",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -493,7 +493,7 @@
     "metaTitle": "Report a listing",
     "title": "Report this listing",
     "notFoundTitle": "Listing not found",
-    "notFoundText": "This horse may already be sold or removed. Thank you for helping keep EquineTrade safe.",
+    "notFoundText": "This horse may already be sold or removed. Thank you for helping keep HorseMart safe.",
     "checkingLogin": "Checking your login…",
     "question": "What's wrong with this listing?",
     "reasons": {
@@ -592,15 +592,15 @@
     "errGeneric": "Something went wrong. Please try again.",
     "otherWays": "Other ways back in",
     "googleWay": "Linked Google in your profile? Continue with Google, then set a new password in your profile.",
-    "adminWay": "No recovery code or Google? WhatsApp EquineTrade from your registered number and we'll reset your password.",
+    "adminWay": "No recovery code or Google? WhatsApp HorseMart from your registered number and we'll reset your password.",
     "backToLogin": "Back to Log in",
     "google": "Continue with Google",
     "googleOpening": "Opening Google…",
     "googleNotSetUp": "Google sign-in isn't switched on yet. Please try another way.",
     "googleWorking": "Logging you in…",
     "googleFailed": "Couldn't log in with Google. Please try again.",
-    "googleNotLinked": "This Google account isn't linked to an EquineTrade account. Log in with your mobile number and password, then link Google in your profile.",
-    "googleInUse": "This Google account is already linked to another EquineTrade account.",
+    "googleNotLinked": "This Google account isn't linked to an HorseMart account. Log in with your mobile number and password, then link Google in your profile.",
+    "googleInUse": "This Google account is already linked to another HorseMart account.",
     "sectionTitle": "Account recovery",
     "sectionIntro": "Ways to get back in if you forget your password.",
     "codeTitle": "Recovery code",
@@ -649,7 +649,7 @@
     "errAdmin": "Admin accounts can't be deleted here. Ask an L1 admin to remove you from the team first.",
     "errGeneric": "Couldn't finish deleting your account. Please try again.",
     "doneTitle": "Your account has been deleted",
-    "doneText": "Your listings, photos, videos and personal details have been removed. Thank you for using EquineTrade.",
+    "doneText": "Your listings, photos, videos and personal details have been removed. Thank you for using HorseMart.",
     "goHome": "Go to home page"
   }
 }

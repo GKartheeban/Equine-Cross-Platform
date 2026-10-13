@@ -15,7 +15,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <p>
-          <span className="font-semibold text-foreground">EquineTrade</span>
+          <span className="font-semibold text-foreground">HorseMart</span>
           {" · "}
           {t("tagline")}
         </p>
@@ -28,7 +28,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <p className="pb-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} EquineTrade
+        © {new Date().getFullYear()} HorseMart
       </p>
     </footer>
   );

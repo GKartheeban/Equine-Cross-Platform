@@ -4,7 +4,7 @@ import { ForgotForm } from "./forgot-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("recovery");
-  return { title: `${t("forgotTitle")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("forgotTitle")} | HorseMart`, robots: { index: false } };
 }
 
 export default async function ForgotPasswordPage() {

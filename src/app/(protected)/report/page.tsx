@@ -8,7 +8,7 @@ import { ReportForm } from "./report-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("report");
-  return { title: `${t("metaTitle")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("metaTitle")} | HorseMart`, robots: { index: false } };
 }
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

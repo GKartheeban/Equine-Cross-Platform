@@ -15,7 +15,7 @@ const phoneText = (p: string) => {
 
 // Turns database error codes into plain words
 function friendly(message: string) {
-  if (message.includes("NO_USER")) return "No account with this number. Ask them to log in to EquineTrade once, then add them.";
+  if (message.includes("NO_USER")) return "No account with this number. Ask them to log in to HorseMart once, then add them.";
   if (message.includes("BAD_PHONE")) return "Enter a valid 10-digit mobile number.";
   if (message.includes("LAST_L1")) return "There must always be at least one L1 admin.";
   return "Something went wrong. Please try again.";
@@ -84,7 +84,7 @@ export function Team() {
 
       <form onSubmit={add} className="grid gap-3 rounded-xl border p-4">
         <h3 className="font-semibold">Add an admin</h3>
-        <p className="-mt-2 text-xs text-muted-foreground">They must have logged in to EquineTrade once with this number.</p>
+        <p className="-mt-2 text-xs text-muted-foreground">They must have logged in to HorseMart once with this number.</p>
         <div className="flex">
           <span className="flex h-11 items-center rounded-l-lg border border-r-0 bg-muted px-3 text-muted-foreground">+91</span>
           <input

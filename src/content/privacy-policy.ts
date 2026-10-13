@@ -1,4 +1,4 @@
-// EquineTrade Privacy Policy, in English and Tamil.
+// HorseMart Privacy Policy, in English and Tamil.
 // Shown at /privacy. To change the wording, edit the text below.
 // Before launch: fill in the Grievance Officer details in src/content/legal.ts.
 
@@ -17,7 +17,7 @@ const en: LegalDocument = {
   contentsTitle: "Contents",
   intro: [
     {
-      p: `EquineTrade (“EquineTrade”, “we”, “us” or “our”) runs the website ${SITE}, an online marketplace where people in Tamil Nadu can list horses for sale and contact sellers directly. This Privacy Policy explains what personal data we collect, why we collect it, who can see it, how long we keep it, and the choices and rights you have.`,
+      p: `HorseMart (“HorseMart”, “we”, “us” or “our”) runs the website ${SITE}, an online marketplace where people in Tamil Nadu can list horses for sale and contact sellers directly. This Privacy Policy explains what personal data we collect, why we collect it, who can see it, how long we keep it, and the choices and rights you have.`,
     },
     {
       p: "This policy applies to everyone who visits or uses the website, whether or not they have an account. By creating an account or using the website, you agree to your information being collected and used as described here. If you do not agree, please do not use the website.",
@@ -36,7 +36,7 @@ const en: LegalDocument = {
           list: [
             {
               label: "Account details:",
-              text: "your mobile number, the name you choose to show, and your password. Your password is stored only in a scrambled (hashed) form, so no one at EquineTrade can see it.",
+              text: "your mobile number, the name you choose to show, and your password. Your password is stored only in a scrambled (hashed) form, so no one at HorseMart can see it.",
             },
             { label: "Profile details (optional):", text: "your profile photo, district and preferred language." },
             {
@@ -132,11 +132,11 @@ const en: LegalDocument = {
             },
             {
               label: "Legal reasons:",
-              text: "when required by law, a court order, or a lawful request from a government agency or the police, or when needed to protect the rights, safety or property of our users, the public or EquineTrade.",
+              text: "when required by law, a court order, or a lawful request from a government agency or the police, or when needed to protect the rights, safety or property of our users, the public or HorseMart.",
             },
             {
               label: "Change of ownership:",
-              text: "if EquineTrade is merged with, sold to or transferred to another organisation, your data may move to the new owner, who must continue to protect it as this policy describes.",
+              text: "if HorseMart is merged with, sold to or transferred to another organisation, your data may move to the new owner, who must continue to protect it as this policy describes.",
             },
           ],
         },
@@ -213,7 +213,7 @@ const en: LegalDocument = {
           ],
         },
         {
-          p: "No website can be completely secure. Keep your password and recovery code to yourself. EquineTrade will never ask for them by phone, SMS or WhatsApp. If a data breach affects you, we will inform you and the authorities as the law requires.",
+          p: "No website can be completely secure. Keep your password and recovery code to yourself. HorseMart will never ask for them by phone, SMS or WhatsApp. If a data breach affects you, we will inform you and the authorities as the law requires.",
         },
       ],
     },
@@ -251,7 +251,7 @@ const en: LegalDocument = {
       title: "10. Age limit",
       blocks: [
         {
-          p: "EquineTrade is only for people aged 18 and above. We do not knowingly collect personal data from anyone under 18. If you believe someone under 18 has created an account, please contact us and we will delete it.",
+          p: "HorseMart is only for people aged 18 and above. We do not knowingly collect personal data from anyone under 18. If you believe someone under 18 has created an account, please contact us and we will delete it.",
         },
       ],
     },
@@ -308,7 +308,7 @@ const ta: LegalDocument = {
   contentsTitle: "பொருளடக்கம்",
   intro: [
     {
-      p: `EquineTrade (“EquineTrade”, “நாங்கள்”, “எங்கள்”) நடத்தும் ${SITE} இணையதளம், தமிழ்நாட்டில் உள்ளவர்கள் விற்பனைக்கான குதிரைகளைப் பதிவிடவும், விற்பனையாளர்களை நேரடியாகத் தொடர்புகொள்ளவும் உதவும் ஓர் இணையச் சந்தை. நாங்கள் என்னென்ன தனிப்பட்ட தரவுகளைச் சேகரிக்கிறோம், ஏன் சேகரிக்கிறோம், அவற்றை யார் பார்க்க முடியும், எவ்வளவு காலம் வைத்திருக்கிறோம், உங்களுக்குள்ள தேர்வுகளும் உரிமைகளும் என்ன என்பதை இந்தத் தனியுரிமைக் கொள்கை விளக்குகிறது.`,
+      p: `HorseMart (“HorseMart”, “நாங்கள்”, “எங்கள்”) நடத்தும் ${SITE} இணையதளம், தமிழ்நாட்டில் உள்ளவர்கள் விற்பனைக்கான குதிரைகளைப் பதிவிடவும், விற்பனையாளர்களை நேரடியாகத் தொடர்புகொள்ளவும் உதவும் ஓர் இணையச் சந்தை. நாங்கள் என்னென்ன தனிப்பட்ட தரவுகளைச் சேகரிக்கிறோம், ஏன் சேகரிக்கிறோம், அவற்றை யார் பார்க்க முடியும், எவ்வளவு காலம் வைத்திருக்கிறோம், உங்களுக்குள்ள தேர்வுகளும் உரிமைகளும் என்ன என்பதை இந்தத் தனியுரிமைக் கொள்கை விளக்குகிறது.`,
     },
     {
       p: "கணக்கு வைத்திருப்பவர், இல்லாதவர் என்ற வேறுபாடின்றி, இந்த இணையதளத்தைப் பார்வையிடும் அல்லது பயன்படுத்தும் அனைவருக்கும் இந்தக் கொள்கை பொருந்தும். கணக்கை உருவாக்குவதன் மூலமோ இணையதளத்தைப் பயன்படுத்துவதன் மூலமோ, இங்கு விவரிக்கப்பட்டுள்ளபடி உங்கள் தகவல்கள் சேகரிக்கப்பட்டுப் பயன்படுத்தப்படுவதற்கு நீங்கள் ஒப்புக்கொள்கிறீர்கள். நீங்கள் ஒப்புக்கொள்ளவில்லை எனில், தயவுசெய்து இணையதளத்தைப் பயன்படுத்த வேண்டாம்.",
@@ -327,7 +327,7 @@ const ta: LegalDocument = {
           list: [
             {
               label: "கணக்கு விவரங்கள்:",
-              text: "உங்கள் மொபைல் எண், நீங்கள் காட்ட விரும்பும் பெயர், உங்கள் கடவுச்சொல். கடவுச்சொல் மாற்றியமைக்கப்பட்ட (hash செய்யப்பட்ட) வடிவில் மட்டுமே சேமிக்கப்படுவதால், EquineTrade-இல் யாராலும் அதைப் பார்க்க முடியாது.",
+              text: "உங்கள் மொபைல் எண், நீங்கள் காட்ட விரும்பும் பெயர், உங்கள் கடவுச்சொல். கடவுச்சொல் மாற்றியமைக்கப்பட்ட (hash செய்யப்பட்ட) வடிவில் மட்டுமே சேமிக்கப்படுவதால், HorseMart-இல் யாராலும் அதைப் பார்க்க முடியாது.",
             },
             { label: "சுயவிவர விவரங்கள் (விருப்பம்):", text: "உங்கள் சுயவிவரப் புகைப்படம், மாவட்டம், விருப்ப மொழி." },
             {
@@ -426,11 +426,11 @@ const ta: LegalDocument = {
             },
             {
               label: "சட்டக் காரணங்கள்:",
-              text: "சட்டம், நீதிமன்ற உத்தரவு, அல்லது அரசு நிறுவனம் அல்லது காவல்துறையின் சட்டப்பூர்வக் கோரிக்கை ஆகியவற்றின்படி தேவைப்படும்போது; அல்லது எங்கள் பயனர்கள், பொதுமக்கள் அல்லது EquineTrade-இன் உரிமைகள், பாதுகாப்பு, சொத்து ஆகியவற்றைப் பாதுகாக்கத் தேவைப்படும்போது.",
+              text: "சட்டம், நீதிமன்ற உத்தரவு, அல்லது அரசு நிறுவனம் அல்லது காவல்துறையின் சட்டப்பூர்வக் கோரிக்கை ஆகியவற்றின்படி தேவைப்படும்போது; அல்லது எங்கள் பயனர்கள், பொதுமக்கள் அல்லது HorseMart-இன் உரிமைகள், பாதுகாப்பு, சொத்து ஆகியவற்றைப் பாதுகாக்கத் தேவைப்படும்போது.",
             },
             {
               label: "உரிமை மாற்றம்:",
-              text: "EquineTrade வேறொரு நிறுவனத்துடன் இணைக்கப்பட்டாலோ, விற்கப்பட்டாலோ, மாற்றப்பட்டாலோ, உங்கள் தரவு புதிய உரிமையாளருக்குச் செல்லக்கூடும். இந்தக் கொள்கையில் விவரிக்கப்பட்டுள்ளபடியே அவர்களும் அதைப் பாதுகாக்க வேண்டும்.",
+              text: "HorseMart வேறொரு நிறுவனத்துடன் இணைக்கப்பட்டாலோ, விற்கப்பட்டாலோ, மாற்றப்பட்டாலோ, உங்கள் தரவு புதிய உரிமையாளருக்குச் செல்லக்கூடும். இந்தக் கொள்கையில் விவரிக்கப்பட்டுள்ளபடியே அவர்களும் அதைப் பாதுகாக்க வேண்டும்.",
             },
           ],
         },
@@ -509,7 +509,7 @@ const ta: LegalDocument = {
           ],
         },
         {
-          p: "எந்த இணையதளமும் முழுமையாகப் பாதுகாப்பானது அல்ல. உங்கள் கடவுச்சொல்லையும் மீட்புக் குறியீட்டையும் யாரிடமும் பகிர வேண்டாம். EquineTrade அவற்றைத் தொலைபேசி, SMS அல்லது WhatsApp மூலம் ஒருபோதும் கேட்காது. தரவு மீறல் உங்களைப் பாதித்தால், சட்டப்படி உங்களுக்கும் உரிய அதிகாரிகளுக்கும் தெரிவிப்போம்.",
+          p: "எந்த இணையதளமும் முழுமையாகப் பாதுகாப்பானது அல்ல. உங்கள் கடவுச்சொல்லையும் மீட்புக் குறியீட்டையும் யாரிடமும் பகிர வேண்டாம். HorseMart அவற்றைத் தொலைபேசி, SMS அல்லது WhatsApp மூலம் ஒருபோதும் கேட்காது. தரவு மீறல் உங்களைப் பாதித்தால், சட்டப்படி உங்களுக்கும் உரிய அதிகாரிகளுக்கும் தெரிவிப்போம்.",
         },
       ],
     },
@@ -553,7 +553,7 @@ const ta: LegalDocument = {
       title: "10. வயது வரம்பு",
       blocks: [
         {
-          p: "EquineTrade 18 வயது மற்றும் அதற்கு மேற்பட்டவர்களுக்கு மட்டுமே. 18 வயதுக்குட்பட்ட எவரிடமிருந்தும் தெரிந்தே தனிப்பட்ட தரவைச் சேகரிப்பதில்லை. 18 வயதுக்குட்பட்ட ஒருவர் கணக்கை உருவாக்கியுள்ளார் என நீங்கள் கருதினால், எங்களைத் தொடர்புகொள்ளுங்கள்; அந்தக் கணக்கை நீக்குவோம்.",
+          p: "HorseMart 18 வயது மற்றும் அதற்கு மேற்பட்டவர்களுக்கு மட்டுமே. 18 வயதுக்குட்பட்ட எவரிடமிருந்தும் தெரிந்தே தனிப்பட்ட தரவைச் சேகரிப்பதில்லை. 18 வயதுக்குட்பட்ட ஒருவர் கணக்கை உருவாக்கியுள்ளார் என நீங்கள் கருதினால், எங்களைத் தொடர்புகொள்ளுங்கள்; அந்தக் கணக்கை நீக்குவோம்.",
         },
       ],
     },

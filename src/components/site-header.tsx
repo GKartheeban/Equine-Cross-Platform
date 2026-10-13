@@ -9,7 +9,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4">
         <Link href="/" className="shrink-0 text-lg font-semibold tracking-tight">
-          Equine<span className="text-primary">Trade</span>
+          Horse<span className="text-primary">Mart</span>
         </Link>
 
         <nav className="flex min-w-0 items-center gap-1 text-sm sm:gap-2">

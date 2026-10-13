@@ -5,7 +5,7 @@ import { MyListings } from "./my-listings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("myListings");
-  return { title: `${t("title")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("title")} | HorseMart`, robots: { index: false } };
 }
 
 export default async function MyListingsPage() {

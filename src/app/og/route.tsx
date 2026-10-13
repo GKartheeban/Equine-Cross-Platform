@@ -21,7 +21,7 @@ export function GET() {
         }}
       >
         <div style={{ display: "flex", fontSize: 88, fontWeight: 700, letterSpacing: -2 }}>
-          Equine<span style={{ color: "#8a4b22" }}>Trade</span>
+          Horse<span style={{ color: "#8a4b22" }}>Mart</span>
         </div>
         <div style={{ marginTop: 24, fontSize: 44, color: "#555" }}>Horses for sale across Tamil Nadu</div>
         <div style={{ marginTop: 48, display: "flex", gap: 20, fontSize: 30, color: "#8a4b22" }}>

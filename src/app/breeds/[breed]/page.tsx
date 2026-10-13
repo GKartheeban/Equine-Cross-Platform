@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!breeds.some((b) => b.slug === slug)) return {};
   const { t, heading, intro } = await texts(slug);
   return {
-    title: `${heading} | EquineTrade`,
+    title: `${heading} | HorseMart`,
     description: `${t("breedMeta", { heading })} ${intro}`,
     alternates: { canonical: `/breeds/${slug}` },
     openGraph: { title: heading, description: intro, images: ["/og"] },

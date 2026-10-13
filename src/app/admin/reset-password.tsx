@@ -44,7 +44,7 @@ export function ResetPassword() {
   }
 
   const message = done
-    ? `EquineTrade: your temporary password is ${done.password}\nLog in with your mobile number and this password. You'll be asked to choose a new password.`
+    ? `HorseMart: your temporary password is ${done.password}\nLog in with your mobile number and this password. You'll be asked to choose a new password.`
     : "";
 
   return (

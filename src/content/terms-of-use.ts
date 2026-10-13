@@ -1,4 +1,4 @@
-// EquineTrade Terms of Use, in English and Tamil.
+// HorseMart Terms of Use, in English and Tamil.
 // Shown at /terms. To change the wording, edit the text below.
 // Before launch: fill in the Grievance Officer details in src/content/legal.ts
 // (the city there is also the city whose courts handle disputes, section 15).
@@ -18,7 +18,7 @@ const en: LegalDocument = {
   contentsTitle: "Contents",
   intro: [
     {
-      p: "Please read these Terms of Use carefully before using EquineTrade. They explain the rules for using the Website, what we are and are not responsible for, and what we expect from every Buyer and Seller.",
+      p: "Please read these Terms of Use carefully before using HorseMart. They explain the rules for using the Website, what we are and are not responsible for, and what we expect from every Buyer and Seller.",
     },
   ],
   sections: [
@@ -30,7 +30,7 @@ const en: LegalDocument = {
           clauses: [
             {
               n: "1.1",
-              text: `These Terms of Use (the “Terms”) are a legal agreement between you and EquineTrade (“EquineTrade”, “we”, “us” or “our”). They govern your access to and use of the website ${SITE} (the “Website”).`,
+              text: `These Terms of Use (the “Terms”) are a legal agreement between you and HorseMart (“HorseMart”, “we”, “us” or “our”). They govern your access to and use of the website ${SITE} (the “Website”).`,
             },
             {
               n: "1.2",
@@ -74,7 +74,7 @@ const en: LegalDocument = {
           clauses: [
             {
               n: "3.1",
-              text: "EquineTrade is an online classifieds platform. We only provide a place where Sellers can advertise horses and Buyers can find and contact them.",
+              text: "HorseMart is an online classifieds platform. We only provide a place where Sellers can advertise horses and Buyers can find and contact them.",
             },
             {
               n: "3.2",
@@ -167,7 +167,7 @@ const en: LegalDocument = {
             },
             {
               n: "6.2",
-              text: "Never pay an advance, deposit or token amount to someone you have not met, or for a horse you have not seen. EquineTrade never collects payments on behalf of Sellers and will never ask you to pay through the Website.",
+              text: "Never pay an advance, deposit or token amount to someone you have not met, or for a horse you have not seen. HorseMart never collects payments on behalf of Sellers and will never ask you to pay through the Website.",
             },
             {
               n: "6.3",
@@ -213,7 +213,7 @@ const en: LegalDocument = {
             { n: "8.1", text: "You keep ownership of the Content you post." },
             {
               n: "8.2",
-              text: "By posting Content, you grant EquineTrade a non-exclusive, royalty-free, worldwide licence to host, store, copy, resize, display and share it on the Website, and to use it to promote the Website, for as long as it remains on the Website.",
+              text: "By posting Content, you grant HorseMart a non-exclusive, royalty-free, worldwide licence to host, store, copy, resize, display and share it on the Website, and to use it to promote the Website, for as long as it remains on the Website.",
             },
             {
               n: "8.3",
@@ -253,7 +253,7 @@ const en: LegalDocument = {
           clauses: [
             {
               n: "10.1",
-              text: "We may, at our discretion and without prior notice, remove any Listing, or suspend or permanently close any account, if we reasonably believe that a User has broken these Terms or the law, or if this is necessary to protect other Users or EquineTrade.",
+              text: "We may, at our discretion and without prior notice, remove any Listing, or suspend or permanently close any account, if we reasonably believe that a User has broken these Terms or the law, or if this is necessary to protect other Users or HorseMart.",
             },
             {
               n: "10.2",
@@ -297,7 +297,7 @@ const en: LegalDocument = {
           clauses: [
             {
               n: "12.1",
-              text: "To the fullest extent permitted by law, EquineTrade, its founders, team members and service providers will not be liable for any loss or damage arising out of or in connection with:",
+              text: "To the fullest extent permitted by law, HorseMart, its founders, team members and service providers will not be liable for any loss or damage arising out of or in connection with:",
               items: [
                 "any dealing or transaction between Users, including payment, delivery, or the condition, health, injury, death or behaviour of any horse;",
                 "any Content posted by Users;",
@@ -307,7 +307,7 @@ const en: LegalDocument = {
             },
             {
               n: "12.2",
-              text: "If EquineTrade is nevertheless found liable to you, our total liability will not exceed ₹1,000 (one thousand Indian rupees) or the total amount you have paid us in the twelve months before the claim, whichever is higher.",
+              text: "If HorseMart is nevertheless found liable to you, our total liability will not exceed ₹1,000 (one thousand Indian rupees) or the total amount you have paid us in the twelve months before the claim, whichever is higher.",
             },
             {
               n: "12.3",
@@ -322,7 +322,7 @@ const en: LegalDocument = {
       title: "13. Indemnity",
       blocks: [
         {
-          p: "You agree to indemnify and hold harmless EquineTrade, its founders, team members and service providers against any claim, loss, damage or cost (including reasonable legal fees) arising out of your Content, your use of the Website, your dealings with other Users, or your breach of these Terms or of any law.",
+          p: "You agree to indemnify and hold harmless HorseMart, its founders, team members and service providers against any claim, loss, damage or cost (including reasonable legal fees) arising out of your Content, your use of the Website, your dealings with other Users, or your breach of these Terms or of any law.",
         },
       ],
     },
@@ -387,7 +387,7 @@ const en: LegalDocument = {
           clauses: [
             {
               n: "17.1",
-              text: "These Terms, together with our Privacy Policy, form the entire agreement between you and EquineTrade about the Website.",
+              text: "These Terms, together with our Privacy Policy, form the entire agreement between you and HorseMart about the Website.",
             },
             {
               n: "17.2",
@@ -418,7 +418,7 @@ const ta: LegalDocument = {
   contentsTitle: "பொருளடக்கம்",
   intro: [
     {
-      p: "EquineTrade-ஐப் பயன்படுத்துவதற்கு முன், இந்தப் பயன்பாட்டு விதிமுறைகளைக் கவனமாகப் படியுங்கள். இணையதளத்தைப் பயன்படுத்துவதற்கான விதிகள், நாங்கள் எவற்றுக்குப் பொறுப்பு, எவற்றுக்குப் பொறுப்பல்ல, ஒவ்வொரு வாங்குபவரிடமும் விற்பனையாளரிடமும் நாங்கள் எதிர்பார்ப்பவை ஆகியவற்றை இவை விளக்குகின்றன.",
+      p: "HorseMart-ஐப் பயன்படுத்துவதற்கு முன், இந்தப் பயன்பாட்டு விதிமுறைகளைக் கவனமாகப் படியுங்கள். இணையதளத்தைப் பயன்படுத்துவதற்கான விதிகள், நாங்கள் எவற்றுக்குப் பொறுப்பு, எவற்றுக்குப் பொறுப்பல்ல, ஒவ்வொரு வாங்குபவரிடமும் விற்பனையாளரிடமும் நாங்கள் எதிர்பார்ப்பவை ஆகியவற்றை இவை விளக்குகின்றன.",
     },
   ],
   sections: [
@@ -430,7 +430,7 @@ const ta: LegalDocument = {
           clauses: [
             {
               n: "1.1",
-              text: `இந்தப் பயன்பாட்டு விதிமுறைகள் (“விதிமுறைகள்”) உங்களுக்கும் EquineTrade-க்கும் (“EquineTrade”, “நாங்கள்”, “எங்கள்”) இடையிலான சட்டப்பூர்வ ஒப்பந்தமாகும். ${SITE} இணையதளத்தை (“இணையதளம்”) நீங்கள் அணுகுவதையும் பயன்படுத்துவதையும் இவை நெறிப்படுத்துகின்றன.`,
+              text: `இந்தப் பயன்பாட்டு விதிமுறைகள் (“விதிமுறைகள்”) உங்களுக்கும் HorseMart-க்கும் (“HorseMart”, “நாங்கள்”, “எங்கள்”) இடையிலான சட்டப்பூர்வ ஒப்பந்தமாகும். ${SITE} இணையதளத்தை (“இணையதளம்”) நீங்கள் அணுகுவதையும் பயன்படுத்துவதையும் இவை நெறிப்படுத்துகின்றன.`,
             },
             {
               n: "1.2",
@@ -474,7 +474,7 @@ const ta: LegalDocument = {
           clauses: [
             {
               n: "3.1",
-              text: "EquineTrade ஓர் இணைய வகைப்படுத்தப்பட்ட விளம்பரத் தளம். விற்பனையாளர்கள் குதிரைகளை விளம்பரப்படுத்தவும், வாங்குபவர்கள் அவற்றைக் கண்டறிந்து தொடர்புகொள்ளவும் ஓர் இடத்தை மட்டுமே நாங்கள் வழங்குகிறோம்.",
+              text: "HorseMart ஓர் இணைய வகைப்படுத்தப்பட்ட விளம்பரத் தளம். விற்பனையாளர்கள் குதிரைகளை விளம்பரப்படுத்தவும், வாங்குபவர்கள் அவற்றைக் கண்டறிந்து தொடர்புகொள்ளவும் ஓர் இடத்தை மட்டுமே நாங்கள் வழங்குகிறோம்.",
             },
             {
               n: "3.2",
@@ -567,7 +567,7 @@ const ta: LegalDocument = {
             },
             {
               n: "6.2",
-              text: "நீங்கள் சந்திக்காத ஒருவருக்கோ, நீங்கள் பார்க்காத குதிரைக்கோ முன்பணம், வைப்புத்தொகை அல்லது டோக்கன் தொகை எதையும் ஒருபோதும் செலுத்த வேண்டாம். EquineTrade விற்பனையாளர்கள் சார்பாக எந்தப் பணத்தையும் வசூலிப்பதில்லை; இணையதளம் வழியாகப் பணம் செலுத்துமாறு உங்களிடம் ஒருபோதும் கேட்காது.",
+              text: "நீங்கள் சந்திக்காத ஒருவருக்கோ, நீங்கள் பார்க்காத குதிரைக்கோ முன்பணம், வைப்புத்தொகை அல்லது டோக்கன் தொகை எதையும் ஒருபோதும் செலுத்த வேண்டாம். HorseMart விற்பனையாளர்கள் சார்பாக எந்தப் பணத்தையும் வசூலிப்பதில்லை; இணையதளம் வழியாகப் பணம் செலுத்துமாறு உங்களிடம் ஒருபோதும் கேட்காது.",
             },
             {
               n: "6.3",
@@ -613,7 +613,7 @@ const ta: LegalDocument = {
             { n: "8.1", text: "நீங்கள் இடும் உள்ளடக்கத்தின் உரிமை உங்களிடமே இருக்கும்." },
             {
               n: "8.2",
-              text: "உள்ளடக்கத்தை இடுவதன் மூலம், அது இணையதளத்தில் இருக்கும் வரை, அதை இணையதளத்தில் ஹோஸ்ட் செய்ய, சேமிக்க, நகலெடுக்க, அளவு மாற்ற, காட்சிப்படுத்த, பகிர, இணையதளத்தை விளம்பரப்படுத்தப் பயன்படுத்த, EquineTrade-க்குப் பிரத்யேகமற்ற, ராயல்டி இல்லாத, உலகளாவிய உரிமத்தை நீங்கள் வழங்குகிறீர்கள்.",
+              text: "உள்ளடக்கத்தை இடுவதன் மூலம், அது இணையதளத்தில் இருக்கும் வரை, அதை இணையதளத்தில் ஹோஸ்ட் செய்ய, சேமிக்க, நகலெடுக்க, அளவு மாற்ற, காட்சிப்படுத்த, பகிர, இணையதளத்தை விளம்பரப்படுத்தப் பயன்படுத்த, HorseMart-க்குப் பிரத்யேகமற்ற, ராயல்டி இல்லாத, உலகளாவிய உரிமத்தை நீங்கள் வழங்குகிறீர்கள்.",
             },
             {
               n: "8.3",
@@ -653,7 +653,7 @@ const ta: LegalDocument = {
           clauses: [
             {
               n: "10.1",
-              text: "ஒரு பயனர் இந்த விதிமுறைகளையோ சட்டத்தையோ மீறியுள்ளார் என நாங்கள் நியாயமாகக் கருதினால், அல்லது பிற பயனர்களையோ EquineTrade-ஐயோ பாதுகாக்க அவசியமானால், எங்கள் விருப்பப்படி, முன்னறிவிப்பின்றி, எந்தப் பதிவையும் நீக்கலாம்; எந்தக் கணக்கையும் இடைநிறுத்தலாம் அல்லது நிரந்தரமாக மூடலாம்.",
+              text: "ஒரு பயனர் இந்த விதிமுறைகளையோ சட்டத்தையோ மீறியுள்ளார் என நாங்கள் நியாயமாகக் கருதினால், அல்லது பிற பயனர்களையோ HorseMart-ஐயோ பாதுகாக்க அவசியமானால், எங்கள் விருப்பப்படி, முன்னறிவிப்பின்றி, எந்தப் பதிவையும் நீக்கலாம்; எந்தக் கணக்கையும் இடைநிறுத்தலாம் அல்லது நிரந்தரமாக மூடலாம்.",
             },
             {
               n: "10.2",
@@ -697,7 +697,7 @@ const ta: LegalDocument = {
           clauses: [
             {
               n: "12.1",
-              text: "சட்டம் அனுமதிக்கும் முழு அளவிற்கு, பின்வருவனவற்றால் அல்லது அவை தொடர்பாக ஏற்படும் எந்த இழப்பு அல்லது சேதத்திற்கும் EquineTrade, அதன் நிறுவனர்கள், குழு உறுப்பினர்கள், சேவை வழங்குநர்கள் பொறுப்பாக மாட்டார்கள்:",
+              text: "சட்டம் அனுமதிக்கும் முழு அளவிற்கு, பின்வருவனவற்றால் அல்லது அவை தொடர்பாக ஏற்படும் எந்த இழப்பு அல்லது சேதத்திற்கும் HorseMart, அதன் நிறுவனர்கள், குழு உறுப்பினர்கள், சேவை வழங்குநர்கள் பொறுப்பாக மாட்டார்கள்:",
               items: [
                 "பயனர்களுக்கு இடையிலான எந்தப் பரிமாற்றம் அல்லது பரிவர்த்தனையும் — பணம் செலுத்துதல், ஒப்படைப்பு, அல்லது எந்தக் குதிரையின் நிலை, உடல்நலம், காயம், இறப்பு அல்லது நடத்தை உட்பட;",
                 "பயனர்கள் இடும் எந்த உள்ளடக்கமும்;",
@@ -707,7 +707,7 @@ const ta: LegalDocument = {
             },
             {
               n: "12.2",
-              text: "இவற்றையும் மீறி EquineTrade உங்களுக்குப் பொறுப்பு எனக் கண்டறியப்பட்டால், எங்கள் மொத்தப் பொறுப்பு ₹1,000 (ஆயிரம் இந்திய ரூபாய்) அல்லது கோரிக்கைக்கு முந்தைய பன்னிரண்டு மாதங்களில் நீங்கள் எங்களுக்குச் செலுத்திய மொத்தத் தொகை — இவற்றில் எது அதிகமோ அதைத் தாண்டாது.",
+              text: "இவற்றையும் மீறி HorseMart உங்களுக்குப் பொறுப்பு எனக் கண்டறியப்பட்டால், எங்கள் மொத்தப் பொறுப்பு ₹1,000 (ஆயிரம் இந்திய ரூபாய்) அல்லது கோரிக்கைக்கு முந்தைய பன்னிரண்டு மாதங்களில் நீங்கள் எங்களுக்குச் செலுத்திய மொத்தத் தொகை — இவற்றில் எது அதிகமோ அதைத் தாண்டாது.",
             },
             {
               n: "12.3",
@@ -722,7 +722,7 @@ const ta: LegalDocument = {
       title: "13. இழப்பீடு",
       blocks: [
         {
-          p: "உங்கள் உள்ளடக்கம், நீங்கள் இணையதளத்தைப் பயன்படுத்துவது, பிற பயனர்களுடனான உங்கள் பரிமாற்றங்கள், அல்லது இந்த விதிமுறைகளை அல்லது எந்தச் சட்டத்தையும் நீங்கள் மீறுவது ஆகியவற்றால் எழும் எந்தக் கோரிக்கை, இழப்பு, சேதம் அல்லது செலவுக்கும் (நியாயமான சட்டக் கட்டணங்கள் உட்பட) எதிராக EquineTrade, அதன் நிறுவனர்கள், குழு உறுப்பினர்கள், சேவை வழங்குநர்கள் ஆகியோருக்கு இழப்பீடு அளிக்கவும், அவர்களுக்குத் தீங்கு நேராமல் பாதுகாக்கவும் நீங்கள் ஒப்புக்கொள்கிறீர்கள்.",
+          p: "உங்கள் உள்ளடக்கம், நீங்கள் இணையதளத்தைப் பயன்படுத்துவது, பிற பயனர்களுடனான உங்கள் பரிமாற்றங்கள், அல்லது இந்த விதிமுறைகளை அல்லது எந்தச் சட்டத்தையும் நீங்கள் மீறுவது ஆகியவற்றால் எழும் எந்தக் கோரிக்கை, இழப்பு, சேதம் அல்லது செலவுக்கும் (நியாயமான சட்டக் கட்டணங்கள் உட்பட) எதிராக HorseMart, அதன் நிறுவனர்கள், குழு உறுப்பினர்கள், சேவை வழங்குநர்கள் ஆகியோருக்கு இழப்பீடு அளிக்கவும், அவர்களுக்குத் தீங்கு நேராமல் பாதுகாக்கவும் நீங்கள் ஒப்புக்கொள்கிறீர்கள்.",
         },
       ],
     },
@@ -787,7 +787,7 @@ const ta: LegalDocument = {
           clauses: [
             {
               n: "17.1",
-              text: "இந்த விதிமுறைகளும் எங்கள் தனியுரிமைக் கொள்கையும் சேர்ந்து, இணையதளம் தொடர்பாக உங்களுக்கும் EquineTrade-க்கும் இடையிலான முழுமையான ஒப்பந்தமாக அமைகின்றன.",
+              text: "இந்த விதிமுறைகளும் எங்கள் தனியுரிமைக் கொள்கையும் சேர்ந்து, இணையதளம் தொடர்பாக உங்களுக்கும் HorseMart-க்கும் இடையிலான முழுமையான ஒப்பந்தமாக அமைகின்றன.",
             },
             {
               n: "17.2",

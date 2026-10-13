@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { safeNext } from "@/lib/safe-next";
 import { CallbackHandler } from "./callback-handler";
 
-export const metadata: Metadata = { title: "EquineTrade", robots: { index: false } };
+export const metadata: Metadata = { title: "HorseMart", robots: { index: false } };
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 

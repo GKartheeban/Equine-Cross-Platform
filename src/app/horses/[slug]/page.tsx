@@ -46,14 +46,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const horse = await loadListing(slug);
   const t = await getTranslations("detail");
-  if (!horse) return { title: `${t("notFound")} | EquineTrade` };
+  if (!horse) return { title: `${t("notFound")} | HorseMart` };
   const [l, c] = await Promise.all([labelsFor(horse), getTranslations("common")]);
   const title = t("metaTitle", { breed: l.breed, gender: l.gender, district: l.district, price: formatInr(horse.priceInr) });
   const description = `${c("yearsLong", { count: horse.ageYears })}, ${c("inches", { count: horse.heightInches })}, ${horse.colour}. ${horse.town}, ${l.district}.${
     horse.description ? ` ${horse.description}` : ""
   }`;
   return {
-    title: `${title} | EquineTrade`,
+    title: `${title} | HorseMart`,
     description,
     alternates: { canonical: `/horses/${horse.slug}` },
     openGraph: { type: "article", title, description, images: horse.coverUrl ? [{ url: horse.coverUrl }] : undefined },

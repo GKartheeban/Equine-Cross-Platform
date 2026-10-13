@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: locale === "ta" ? "ta_IN" : "en_IN",
       title: t("siteTitle"),
       description: t("siteDescription"),
-      images: [{ url: "/og", width: 1200, height: 630, alt: "EquineTrade" }],
+      images: [{ url: "/og", width: 1200, height: 630, alt: "HorseMart" }],
     },
     twitter: { card: "summary_large_image", images: ["/og"] },
   };

@@ -13,7 +13,7 @@ async function terms() {
 
 export async function generateMetadata(): Promise<Metadata> {
   const { doc } = await terms();
-  return { title: `${doc.title} | EquineTrade`, alternates: { canonical: "/terms" } };
+  return { title: `${doc.title} | HorseMart`, alternates: { canonical: "/terms" } };
 }
 
 export default async function TermsPage() {

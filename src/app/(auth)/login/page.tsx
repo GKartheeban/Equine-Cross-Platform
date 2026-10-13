@@ -7,7 +7,7 @@ import { LoginForm } from "./login-form";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("login");
   // Login pages don't need to appear in Google
-  return { title: `${t("title")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("title")} | HorseMart`, robots: { index: false } };
 }
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

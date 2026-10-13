@@ -5,7 +5,7 @@ import { PasswordForm } from "./password-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("password");
-  return { title: `${t("title")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("title")} | HorseMart`, robots: { index: false } };
 }
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

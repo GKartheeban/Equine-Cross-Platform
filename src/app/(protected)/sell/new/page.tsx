@@ -4,7 +4,7 @@ import { PostHorseForm } from "./post-horse-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("sell");
-  return { title: `${t("newTitle")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("newTitle")} | HorseMart`, robots: { index: false } };
 }
 
 export default async function SellNewPage() {

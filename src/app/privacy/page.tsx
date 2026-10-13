@@ -13,7 +13,7 @@ async function policy() {
 
 export async function generateMetadata(): Promise<Metadata> {
   const { doc } = await policy();
-  return { title: `${doc.title} | EquineTrade`, alternates: { canonical: "/privacy" } };
+  return { title: `${doc.title} | HorseMart`, alternates: { canonical: "/privacy" } };
 }
 
 export default async function PrivacyPage() {

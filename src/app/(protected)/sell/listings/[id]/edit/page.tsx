@@ -4,7 +4,7 @@ import { EditListing } from "./edit-listing";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("editListing");
-  return { title: `${t("title")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("title")} | HorseMart`, robots: { index: false } };
 }
 
 type Props = { params: Promise<{ id: string }> };

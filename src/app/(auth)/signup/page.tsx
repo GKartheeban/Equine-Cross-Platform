@@ -6,7 +6,7 @@ import { LoginForm } from "../login/login-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("login");
-  return { title: `${t("signupTitle")} | EquineTrade`, robots: { index: false } };
+  return { title: `${t("signupTitle")} | HorseMart`, robots: { index: false } };
 }
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

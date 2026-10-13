@@ -47,7 +47,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const f = await readFilters(searchParams);
   const [heading, t] = await Promise.all([headingFor(f), getTranslations("search")]);
   return {
-    title: `${heading} | EquineTrade`,
+    title: `${heading} | HorseMart`,
     description: t("metaDescription", { heading }),
     // Filtered results all point Google to the main list (breed and district
     // pages have their own addresses for those searches)
