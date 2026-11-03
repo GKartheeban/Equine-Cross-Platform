@@ -35,10 +35,12 @@ export function SiteHeader() {
           <AccountMenu />
           <Link
             href="/sell"
-            className="group ml-1 inline-flex items-center gap-1.5 truncate rounded-full bg-gradient-to-b from-[#7a3f22] to-[#5b2c17] px-4 py-2.5 font-medium text-[#fbf2e6] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_6px_16px_-8px_rgba(74,37,19,0.7)] transition hover:-translate-y-px hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_-8px_rgba(74,37,19,0.75)] sm:px-5"
+            aria-label={t("postAd")}
+            className="group ml-1 inline-flex size-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-[#7a3f22] to-[#5b2c17] font-medium text-[#fbf2e6] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_6px_16px_-8px_rgba(74,37,19,0.7)] transition hover:-translate-y-px hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_22px_-8px_rgba(74,37,19,0.75)] sm:size-auto sm:px-5 sm:py-2.5"
           >
             <Plus className="size-4 shrink-0 transition-transform duration-300 group-hover:rotate-90" aria-hidden />
-            {t("postAd")}
+            {/* Phones: just the + (the header is narrow); tablets and up: "+ Post an ad" */}
+            <span className="hidden sm:inline">{t("postAd")}</span>
           </Link>
         </nav>
       </div>
