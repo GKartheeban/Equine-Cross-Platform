@@ -12,6 +12,7 @@ import { Team } from "./team";
 import { ActivityLog } from "./activity-log";
 import { ResetPassword } from "./reset-password";
 import { Deletions } from "./deletions";
+import { MarketPosts } from "./market-posts";
 
 type ListingInfo = {
   id: string;
@@ -48,7 +49,7 @@ const thumbOf = (l: ListingInfo) => coverOf(storedMedia(l));
 const dateText = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-type Tab = "dashboard" | "reports" | "recent" | "team" | "log" | "deletions" | "passwords";
+type Tab = "dashboard" | "reports" | "recent" | "team" | "log" | "deletions" | "passwords" | "posts";
 
 export function AdminPanel() {
   const [access, setAccess] = useState<"checking" | "denied" | "ok">("checking");
@@ -197,6 +198,7 @@ export function AdminPanel() {
             ["dashboard", "Dashboard"],
             ["reports", `Reported (${groups.length})`],
             ["recent", "Newest listings"],
+            ["posts", "Other sections"],
             ...(level === 1 && !needsSetup
               ? ([
                   ["team", "Team"],
@@ -224,6 +226,7 @@ export function AdminPanel() {
       {message && <p role="status" className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm">{message}</p>}
 
       {tab === "dashboard" && <Dashboard />}
+      {tab === "posts" && <MarketPosts />}
       {tab === "team" && level === 1 && <Team />}
       {tab === "log" && level === 1 && <ActivityLog />}
       {tab === "deletions" && level === 1 && <Deletions />}

@@ -24,7 +24,7 @@ export function BrowseListings({
   const t = useTranslations("browse");
   const c = useTranslations("common");
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 py-6">
       <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-foreground">{c("home")}</Link>
         {" / "}
@@ -44,7 +44,7 @@ export function BrowseListings({
       </div>
 
       {listings.length > 0 ? (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((horse, i) => (
             <li key={horse.id}>
               <ListingCard horse={horse} priority={i < 3} />

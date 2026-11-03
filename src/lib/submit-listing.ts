@@ -166,7 +166,7 @@ export async function submitListing(
  * crypto.randomUUID only exists on https:// or localhost, so phones testing on
  * http://192.168.x.x need this fallback (getRandomValues works everywhere).
  */
-function newId(): string {
+export function newId(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   const b = crypto.getRandomValues(new Uint8Array(16));
   b[6] = (b[6] & 0x0f) | 0x40; // version 4
@@ -176,7 +176,7 @@ function newId(): string {
 }
 
 /** Resizes a photo to max 1600px and saves it as JPEG (~200–400 KB). */
-async function shrinkImage(file: File): Promise<Blob> {
+export async function shrinkImage(file: File): Promise<Blob> {
   try {
     const bitmap = await createImageBitmap(file);
     const max = 1600;
@@ -194,7 +194,7 @@ async function shrinkImage(file: File): Promise<Blob> {
   }
 }
 
-function extensionOf(file: File) {
+export function extensionOf(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase();
   if (fromName && fromName.length <= 5 && fromName !== file.name.toLowerCase()) return fromName;
   return file.type.split("/")[1]?.replace("quicktime", "mov") || "bin";

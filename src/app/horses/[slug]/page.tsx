@@ -111,7 +111,7 @@ export default async function HorseDetailPage({ params }: Props) {
   const whatsappTitle = `${horse.breed} ${horse.gender.toLowerCase()}`;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-28 pt-4 lg:pb-12">
+    <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 pb-28 pt-4 lg:pb-12">
       {/* Counts one view per visit, for the admin dashboard */}
       <TrackEvent type="view" onceKey={`view:${horse.id}`} listingId={horse.id} />
       <script
@@ -128,7 +128,7 @@ export default async function HorseDetailPage({ params }: Props) {
         <span className="text-foreground">{title}</span>
       </nav>
 
-      <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_340px]">
+      <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] xl:gap-12">
         {/* Left column: media and details */}
         <div className="min-w-0">
           <Media horse={horse} t={t} />
@@ -171,7 +171,7 @@ export default async function HorseDetailPage({ params }: Props) {
 
         {/* Right column: price and contact (sticky on laptops) */}
         <aside className="hidden lg:block">
-          <div className="sticky top-20 space-y-4 rounded-xl border p-5">
+          <div className="sticky top-20 lg:top-28 space-y-4 rounded-xl border p-5">
             <div>
               <p className="text-3xl font-semibold">{formatInr(horse.priceInr)}</p>
               <p className="text-sm text-muted-foreground">
@@ -210,8 +210,8 @@ export default async function HorseDetailPage({ params }: Props) {
       )}
 
       {/* Sticky contact bar on phones */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
+      <div data-sticky-bar className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{formatInr(horse.priceInr)}</p>
             <p className="truncate text-xs text-muted-foreground">{l.district}</p>

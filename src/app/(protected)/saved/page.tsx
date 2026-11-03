@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SavedPage() {
   const t = await getTranslations("saved");
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t("intro")}</p>
       <SavedList />

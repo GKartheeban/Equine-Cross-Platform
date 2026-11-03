@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), var(--font-tamil), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-cinzel), Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -49,23 +50,23 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --background: #fbf7f1; /* soft cream page */
+  --foreground: #24180f;
+  --card: #fffcf7; /* a shade lighter than the page, so cards still lift */
+  --card-foreground: #24180f;
+  --popover: #fffcf7;
+  --popover-foreground: #24180f;
   --primary: oklch(0.42 0.09 45);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --secondary: #f3ebe0;
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: #f3ebe0;
+  --muted-foreground: #76655a;
+  --accent: #f3ebe0;
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: #e8ddcf;
+  --input: #e3d6c5;
   --ring: oklch(0.42 0.09 45);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -128,3 +129,123 @@
     @apply font-sans;
   }
 }
+
+/* Phones: when a page has a fixed contact bar at the bottom, keep the footer's last line visible above it */
+@media (max-width: 1023px) {
+  body:has([data-sticky-bar]) [data-footer-end] {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Header logo animation ─────────────────────────────────────────
+   Only opacity and transform are animated (handled by the graphics card), so it stays smooth.
+   On load: the seal turns in and the letters of HORSEMART rise in one by one.
+   Then: a brass shine runs across MART every few seconds. Hover: the seal tilts, the shine runs. */
+.hm-seal {
+  animation: hm-seal-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.hm-logo:hover .hm-seal {
+  transform: rotate(-10deg);
+}
+.hm-word {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.hm-letter {
+  display: inline-block;
+  animation: hm-letter-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i) * 45ms + 200ms);
+  backface-visibility: hidden;
+}
+/* MART: each letter carries the same brass gradient; moving it letter after letter reads as one sweep */
+.hm-mart .hm-letter {
+  background-image: linear-gradient(100deg, #9a5a2e 0%, #9a5a2e 42%, #f3d39b 50%, #9a5a2e 58%, #9a5a2e 100%);
+  background-size: 400% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    hm-letter-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    hm-shine 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay:
+    calc(var(--i) * 45ms + 200ms),
+    calc(1800ms + (var(--i) - 5) * 90ms);
+}
+.hm-logo:hover .hm-mart .hm-letter {
+  animation: hm-shine-once 800ms cubic-bezier(0.45, 0, 0.55, 1) both;
+  animation-delay: calc((var(--i) - 5) * 70ms);
+}
+@keyframes hm-seal-in {
+  from { opacity: 0; transform: rotate(-90deg) scale(0.88); }
+  to { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+@keyframes hm-letter-in {
+  from { opacity: 0; transform: translate3d(0, 0.4em, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes hm-shine {
+  0%, 84% { background-position: 100% 0; }
+  96%, 100% { background-position: 0% 0; }
+}
+@keyframes hm-shine-once {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+/* Explore page seal: the text ring turns once a minute */
+.hm-seal-ring {
+  animation: hm-turn 60s linear infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+@keyframes hm-turn {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-seal-ring { animation: none; }
+  .hm-seal, .hm-letter, .hm-mart .hm-letter { animation: none; }
+  .hm-logo:hover .hm-seal { transform: none; }
+}
+
+
+/* Hero showcase: slow drift on the photo, caption rising in, brass progress line */
+.hm-kenburns {
+  animation: hm-kenburns 7s ease-out both;
+  will-change: transform;
+}
+.hm-caption {
+  animation: hm-caption-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hm-progress {
+  animation-name: hm-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+@keyframes hm-kenburns {
+  from { transform: scale(1.06) translate3d(1%, 1%, 0); }
+  to { transform: scale(1) translate3d(0, 0, 0); }
+}
+@keyframes hm-caption-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes hm-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-kenburns, .hm-caption, .hm-progress { animation: none; }
+}
+
+/* A patch of plain cream behind header items so they read clearly over the frieze */
+.hm-clear {
+  background-color: #fbf7f1;
+  box-shadow: 0 0 18px 14px #fbf7f1;
+  border-radius: 9999px;
+}
+

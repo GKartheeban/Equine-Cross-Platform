@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { MyListings } from "./my-listings";
+import { MyPosts } from "@/components/my-posts";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("myListings");
@@ -22,6 +23,7 @@ export default async function MyListingsPage() {
         </Link>
       </div>
       <MyListings />
+      <MyPosts />
     </div>
   );
 }

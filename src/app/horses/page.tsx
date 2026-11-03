@@ -94,7 +94,7 @@ export default async function SearchPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 py-6">
       {/* Records what buyers search for (only searches with filters), for the admin dashboard */}
       {(f.breed || f.district || f.price || f.gender) && (
         <TrackEvent
