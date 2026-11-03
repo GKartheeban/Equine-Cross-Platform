@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { cache } from "react";
 import { CalendarDays, ChevronRight, Clock, MapPin, ShieldCheck } from "lucide-react";
 import { ContactPoster } from "@/components/contact-poster";
+import { ShareButton } from "@/components/share-button";
 import { SectionIcon } from "@/components/section-icon";
 import { MarketCard } from "@/components/market-card";
 import { MediaGallery } from "@/components/media-gallery";
@@ -142,7 +143,10 @@ export async function MarketDetailPage({ section, params }: { section: SectionKe
               <SectionIcon section={section} className="size-3.5" strokeWidth={2} />
               {m(`sections.${section}.name`)}
             </Link>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-4xl">{post.title}</h1>
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-4xl">{post.title}</h1>
+              <ShareButton path={path} title={post.title} />
+            </div>
             {dates && (
               <p className="mt-3 flex items-center gap-2 text-lg font-medium">
                 <CalendarDays className="size-5 text-primary" aria-hidden />

@@ -956,5 +956,15 @@
     "how4Text": "Agree the price between you. HorseMart takes nothing.",
     "closerLook": "Take a closer look",
     "horsesForSale": "{count, plural, =1 {horse for sale} other {horses for sale}}"
+  },
+  "share": {
+    "button": "Share",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "telegram": "Telegram",
+    "email": "Email",
+    "message": "Have a look at this on HorseMart: {title}"
   }
 }

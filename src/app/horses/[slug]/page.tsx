@@ -7,6 +7,7 @@ import { cache } from "react";
 import { ContactSeller } from "@/components/contact-seller";
 import { ListingCard } from "@/components/listing-card";
 import { SaveButton } from "@/components/save-button";
+import { ShareButton } from "@/components/share-button";
 import { TrackEvent } from "@/components/track-event";
 import { MediaGallery } from "@/components/media-gallery";
 import { breedSlug, dateLocale, districtSlug, optionKey } from "@/lib/labels";
@@ -136,7 +137,10 @@ export default async function HorseDetailPage({ params }: Props) {
           <header className="mt-6">
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-              <SaveButton listingId={horse.id} slug={horse.slug} />
+              <div className="flex shrink-0 items-center gap-2">
+                <ShareButton path={`/horses/${horse.slug}`} title={title} compact />
+                <SaveButton listingId={horse.id} slug={horse.slug} />
+              </div>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {horse.town}, {l.district} · {t("posted", { when: posted })}

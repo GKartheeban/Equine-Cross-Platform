@@ -956,5 +956,15 @@
     "how4Text": "விலையை நீங்களே பேசி முடிவு செய்யுங்கள். HorseMart எதுவும் எடுக்காது.",
     "closerLook": "அருகில் பாருங்கள்",
     "horsesForSale": "{count, plural, =1 {குதிரை விற்பனைக்கு} other {குதிரைகள் விற்பனைக்கு}}"
+  },
+  "share": {
+    "button": "பகிர்",
+    "copy": "இணைப்பை நகலெடு",
+    "copied": "இணைப்பு நகலெடுக்கப்பட்டது",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "telegram": "Telegram",
+    "email": "மின்னஞ்சல்",
+    "message": "HorseMart-இல் இதைப் பாருங்கள்: {title}"
   }
 }
